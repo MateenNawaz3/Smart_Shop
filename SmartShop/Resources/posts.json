@@ -1,0 +1,74 @@
+[
+ {
+  "id": "kommende-aabning",
+  "date": "2026-08-15",
+  "categoryKey": "opening-soon",
+  "title": {
+   "da": "Ny Smart Shop 24-7 på vej",
+   "en": "A new Smart Shop 24-7 is coming",
+   "de": "Ein neuer Smart Shop 24-7 kommt"
+  },
+  "body": {
+   "da": "Vi åbner snart endnu en døgnåben butik. Følg med her på opslagstavlen — vi løfter sløret for adressen og åbningsdatoen meget snart.",
+   "en": "We're opening another 24-hour store soon. Follow the bulletin board — we'll reveal the address and opening date very soon.",
+   "de": "Wir eröffnen bald ein weiteres rund um die Uhr geöffnetes Geschäft. Bleib auf der Pinnwand dran — wir verraten die Adresse und das Eröffnungsdatum sehr bald."
+  },
+  "media": {
+   "type": "image",
+   "src": "butik-facade.png",
+   "alt": {
+    "da": "Facade på en kommende Smart Shop 24-7 butik",
+    "en": "Facade of an upcoming Smart Shop 24-7 store",
+    "de": "Fassade eines kommenden Smart Shop 24-7 Geschäfts"
+   }
+  }
+ },
+ {
+  "id": "nyt-sortiment",
+  "date": "2026-07-24",
+  "categoryKey": "news",
+  "title": {
+   "da": "Nyt sortiment i butikkerne",
+   "en": "New range in our stores",
+   "de": "Neues Sortiment in den Geschäften"
+  },
+  "body": {
+   "da": "Vi har udvidet udvalget af friske snacks og kolde drikke i alle butikker. Kig forbi og find dine nye favoritter i køleren.",
+   "en": "We've expanded the selection of fresh snacks and cold drinks in all stores. Drop by and find your new favourites in the fridge.",
+   "de": "Wir haben das Angebot an frischen Snacks und kalten Getränken in allen Geschäften erweitert. Schau vorbei und entdecke deine neuen Favoriten im Kühlregal."
+  },
+  "media": {
+   "type": "image",
+   "src": "butik-indvendigt.png",
+   "alt": {
+    "da": "Indvendigt kig i en Smart Shop 24-7 butik",
+    "en": "Interior view of a Smart Shop 24-7 store",
+    "de": "Innenansicht eines Smart Shop 24-7 Geschäfts"
+   }
+  }
+ },
+ {
+  "id": "aabning-billeder",
+  "date": "2026-06-12",
+  "categoryKey": "from-opening",
+  "title": {
+   "da": "Tak for en fantastisk åbningsdag",
+   "en": "Thank you for a fantastic opening day",
+   "de": "Danke für einen fantastischen Eröffnungstag"
+  },
+  "body": {
+   "da": "Der var run på pølser, kaffe og gode snakke, da vi slog dørene op. Tusind tak til alle jer, der kiggede forbi og fejrede dagen med os.",
+   "en": "There was a rush for hot dogs, coffee and good conversations when we opened our doors. A huge thank you to everyone who dropped by and celebrated the day with us.",
+   "de": "Es gab großen Andrang auf Hotdogs, Kaffee und gute Gespräche, als wir unsere Türen öffneten. Vielen Dank an alle, die vorbeigeschaut und den Tag mit uns gefeiert haben."
+  },
+  "media": {
+   "type": "image",
+   "src": "butik-aabning.png",
+   "alt": {
+    "da": "Gæster til åbningen af en Smart Shop 24-7 butik",
+    "en": "Guests at the opening of a Smart Shop 24-7 store",
+    "de": "Gäste bei der Eröffnung eines Smart Shop 24-7 Geschäfts"
+   }
+  }
+ }
+]

@@ -1,0 +1,125 @@
+//
+//  ResetPasswordView.swift
+//  SmartShop
+//
+
+import SwiftUI
+
+/// Port of `src/routes/nulstil-kodeord.tsx`.
+///
+/// Reached from the recovery email. The web has to guard against the link
+/// landing on the wrong page and against the app auto-navigating the user into
+/// `/hjem` mid-recovery — that is what `src/lib/recovery.ts` is for. On iOS the
+/// deep link arrives at exactly one place, so `AuthSessionStore.phase` is simply
+/// pinned to `.recovering` until this screen finishes.
+struct ResetPasswordView: View {
+    @Environment(\.strings) private var t
+    @Environment(AppEnvironment.self) private var environment
+    @Environment(AuthSessionStore.self) private var session
+
+    @State private var password = ""
+    @State private var confirmation = ""
+    @State private var passwordError: String?
+    @State private var confirmationError: String?
+    @State private var formError: String?
+    @State private var isSaving = false
+    @State private var didSave = false
+
+    var body: some View {
+        AppScreen(ovals: BrandOvals(variant: .spread, tone: .light)) {
+            ScrollView {
+                VStack(spacing: Theme.Spacing.lg) {
+                    AppLogo(size: .small).padding(.top, Theme.Spacing.lg)
+
+                    if didSave {
+                        done
+                    } else {
+                        form
+                    }
+                }
+                .padding(.vertical, Theme.Spacing.lg)
+            }
+            .scrollDismissesKeyboard(.interactively)
+        }
+    }
+
+    private var form: some View {
+        VStack(spacing: Theme.Spacing.lg) {
+            VStack(spacing: Theme.Spacing.sm) {
+                Text(t("reset.title")).font(Theme.display(.title))
+                Text(t("reset.subtitle"))
+                    .font(Theme.body(.subheadline))
+                    .foregroundStyle(.white.opacity(0.8))
+            }
+
+            BrandTextField(
+                label: t("reset.newPassword"),
+                text: $password,
+                error: passwordError,
+                isSecure: true,
+                contentType: .newPassword
+            )
+            BrandTextField(
+                label: t("reset.repeatPassword"),
+                text: $confirmation,
+                error: confirmationError,
+                isSecure: true,
+                contentType: .newPassword
+            )
+
+            Button {
+                Task { await save() }
+            } label: {
+                Text(isSaving ? t("reset.submitting") : t("reset.submit"))
+            }
+            .buttonStyle(.brandPrimary)
+            .disabled(isSaving)
+
+            if let formError {
+                Text(formError).font(Theme.body(.subheadline)).multilineTextAlignment(.center)
+            }
+        }
+    }
+
+    private var done: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 56))
+                .foregroundStyle(Theme.Colors.lime)
+            Text(t("reset.doneTitle")).font(Theme.display(.title))
+            Text(t("reset.doneText"))
+                .font(Theme.body(.subheadline))
+                .foregroundStyle(.white.opacity(0.8))
+                .multilineTextAlignment(.center)
+
+            Button(t("reset.backToLogin")) {
+                Task {
+                    // The recovery session is a live session; signing out means
+                    // the new password is actually exercised on next login.
+                    await session.signOut()
+                    session.endPasswordRecovery()
+                }
+            }
+            .buttonStyle(.brandPrimary)
+            .padding(.top, Theme.Spacing.md)
+        }
+    }
+
+    private func save() async {
+        formError = nil
+        passwordError = password.isEmpty ? t("reset.errPassword")
+            : password.count < 8 ? t("reset.errPasswordShort") : nil
+        confirmationError = confirmation.isEmpty ? t("reset.errRepeat")
+            : confirmation != password ? t("reset.errMismatch") : nil
+        guard passwordError == nil, confirmationError == nil else { return }
+
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            try await environment.authService.updatePassword(password)
+            didSave = true
+        } catch {
+            formError = t("reset.errGeneric")
+        }
+    }
+}

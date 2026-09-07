@@ -1,0 +1,86 @@
+[
+ {
+  "id": "smagsproevning-september",
+  "date": "2026-09-12",
+  "time": "15:00-18:00",
+  "priceKr": 0,
+  "title": {
+   "da": "Smagsprøver i butikken",
+   "en": "Tastings in store",
+   "de": "Verkostung im Geschäft"
+  },
+  "body": {
+   "da": "Kig forbi og smag på nyhederne i sortimentet. Gratis for alle — ingen tilmelding.",
+   "en": "Drop by and taste the new products in our range. Free for everyone — no sign-up needed.",
+   "de": "Schau vorbei und probiere die Neuheiten im Sortiment. Kostenlos für alle — ohne Anmeldung."
+  },
+  "place": {
+   "da": "Smart Shop Espe",
+   "en": "Smart Shop Espe",
+   "de": "Smart Shop Espe"
+  }
+ },
+ {
+  "id": "vinsmagning-oktober",
+  "date": "2026-10-03",
+  "time": "19:00-21:30",
+  "priceKr": 149,
+  "title": {
+   "da": "Vinsmagning med vinekspert",
+   "en": "Wine tasting with a wine expert",
+   "de": "Weinprobe mit einem Weinexperten"
+  },
+  "body": {
+   "da": "Seks vine, snacks og gode historier. Begrænset antal pladser — køb din billet i appen.",
+   "en": "Six wines, snacks and good stories. Limited number of seats — buy your ticket in the app.",
+   "de": "Sechs Weine, Snacks und gute Geschichten. Begrenzte Plätze — kaufe dein Ticket in der App."
+  },
+  "place": {
+   "da": "Smart Shop Ballum",
+   "en": "Smart Shop Ballum",
+   "de": "Smart Shop Ballum"
+  }
+ },
+ {
+  "id": "aabningsfest-oktober",
+  "date": "2026-10-24",
+  "time": "10:00-16:00",
+  "priceKr": 0,
+  "title": {
+   "da": "Åbningsfest i ny butik",
+   "en": "Opening party at our new store",
+   "de": "Eröffnungsfest im neuen Geschäft"
+  },
+  "body": {
+   "da": "Pølser, kaffe, konkurrencer og gode tilbud hele dagen. Alle er velkomne.",
+   "en": "Hot dogs, coffee, competitions and great offers all day. Everyone is welcome.",
+   "de": "Hotdogs, Kaffee, Wettbewerbe und tolle Angebote den ganzen Tag. Alle sind willkommen."
+  },
+  "place": {
+   "da": "Smart Shop Skrydstrup",
+   "en": "Smart Shop Skrydstrup",
+   "de": "Smart Shop Skrydstrup"
+  }
+ },
+ {
+  "id": "julebanko-december",
+  "date": "2026-12-05",
+  "time": "18:30-21:00",
+  "priceKr": 75,
+  "title": {
+   "da": "Julebanko",
+   "en": "Christmas bingo",
+   "de": "Weihnachts-Bingo"
+  },
+  "body": {
+   "da": "Hyggelig aften med banko og julegaver på spil. Billetten dækker tre plader.",
+   "en": "A cosy evening of bingo with Christmas gifts to win. The ticket covers three cards.",
+   "de": "Ein gemütlicher Abend mit Bingo und Weihnachtsgeschenken. Das Ticket gilt für drei Karten."
+  },
+  "place": {
+   "da": "Smart Shop Espe",
+   "en": "Smart Shop Espe",
+   "de": "Smart Shop Espe"
+  }
+ }
+]

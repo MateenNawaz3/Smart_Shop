@@ -1,0 +1,233 @@
+[
+ {
+  "slug": "grimstrup",
+  "lat": 55.4923,
+  "lng": 8.6772,
+  "name": "Smart Shop 24-7 Grimstrup",
+  "address": "Egedalvej 11, 6705 Esbjerg Ø, Denmark",
+  "displayAddress": [
+   "Egedalvej 11",
+   "6705 Esbjerg Ø"
+  ],
+  "phone": "+45 7022 0360",
+  "email": "grimstrup@smartshop24-7.dk",
+  "facebookUrl": "https://www.facebook.com/smartshopgrimstrup/",
+  "hours": [
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00"
+  ]
+ },
+ {
+  "slug": "roager",
+  "lat": 55.2762,
+  "lng": 8.8331,
+  "name": "Smart Shop 24-7 Roager",
+  "address": "Roagervej 302, 6760 Ribe, Denmark",
+  "displayAddress": [
+   "Roagervej 302",
+   "6760 Ribe"
+  ],
+  "phone": "+45 7022 0360",
+  "email": "roager@smartshop24-7.dk",
+  "facebookUrl": "https://www.facebook.com/smartshoproager/",
+  "hours": [
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00"
+  ]
+ },
+ {
+  "slug": "rarup",
+  "lat": 55.7163,
+  "lng": 9.9123,
+  "name": "Smart Shop 24-7 Rårup",
+  "address": "Kirkedalsvej 53, 7130 Juelsminde, Denmark",
+  "displayAddress": [
+   "Kirkedalsvej 53",
+   "7130 Juelsminde"
+  ],
+  "phone": "+45 7022 0360",
+  "email": "rarup@smartshop24-7.dk",
+  "facebookUrl": "https://www.facebook.com/smartshopraarup/",
+  "hours": [
+   "06:00 - 22:00",
+   "06:00 - 22:00",
+   "06:00 - 22:00",
+   "06:00 - 22:00",
+   "06:00 - 22:00",
+   "06:00 - 22:00",
+   "06:00 - 22:00"
+  ],
+  "alwaysOpen": false
+ },
+ {
+  "slug": "ballum",
+  "lat": 55.1079,
+  "lng": 8.6861,
+  "name": "Smart Shop 24-7 Ballum",
+  "address": "Byvej 70, Ballum, 6261 Bredebro, Denmark",
+  "displayAddress": [
+   "Byvej 70, Ballum",
+   "6261 Bredebro"
+  ],
+  "phone": "+45 7022 0360",
+  "email": "ballum@smartshop24-7.dk",
+  "facebookUrl": "https://www.facebook.com/smartshopballum/",
+  "hours": [
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00"
+  ]
+ },
+ {
+  "slug": "bakkelandet",
+  "lat": 55.1962,
+  "lng": 10.2081,
+  "name": "Smart Shop 24-7 Bakkelandet",
+  "address": "Birkevej 57, 5672 Broby, Denmark",
+  "displayAddress": [
+   "Birkevej 57",
+   "5672 Broby"
+  ],
+  "phone": "+45 7022 0360",
+  "email": "bakkelandet@smartshop24-7.dk",
+  "facebookUrl": "https://www.facebook.com/smartshopbakkelandet/",
+  "hours": [
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00"
+  ]
+ },
+ {
+  "slug": "espe",
+  "lat": 55.2109,
+  "lng": 10.2813,
+  "name": "Smart Shop 24-7 Espe",
+  "address": "Skovvej 21, 5750 Ringe, Denmark",
+  "displayAddress": [
+   "Skovvej 21",
+   "5750 Ringe"
+  ],
+  "phone": "+45 7022 0360",
+  "email": "espe@smartshop24-7.dk",
+  "facebookUrl": "https://www.facebook.com/smartshopespe5750/",
+  "hours": [
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00"
+  ]
+ },
+ {
+  "slug": "hunderup-sejstrup",
+  "lat": 55.4213,
+  "lng": 8.7168,
+  "name": "Smart Shop 24-7 Hunderup/Sejstrup",
+  "address": "Kjærgårdsvej 34, 6740 Hunderup, Denmark",
+  "displayAddress": [
+   "Kjærgårdsvej 34",
+   "6740 Hunderup"
+  ],
+  "phone": "+45 7022 0360",
+  "email": "hunderup@smartshop24-7.dk",
+  "facebookUrl": "https://www.facebook.com/smartshophunderup6740/",
+  "hours": [
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00"
+  ]
+ },
+ {
+  "slug": "bolderslev",
+  "lat": 55.0012,
+  "lng": 9.2842,
+  "name": "Smart Shop 24-7 Bolderslev",
+  "address": "Bolderslev Hovedgade 10, 6392 Bolderslev, Denmark",
+  "displayAddress": [
+   "Bolderslev Hovedgade 10",
+   "6392 Bolderslev"
+  ],
+  "phone": "+45 7022 0360",
+  "email": "bolderslev@smartshop24-7.dk",
+  "facebookUrl": "https://www.facebook.com/smartshopbolderslev6392/",
+  "hours": [
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00"
+  ]
+ },
+ {
+  "slug": "faldsled",
+  "lat": 55.1519,
+  "lng": 10.0834,
+  "name": "Smart Shop 24-7 Faldsled",
+  "address": "Assensvej 473, 5642 Millinge, Denmark",
+  "displayAddress": [
+   "Assensvej 473",
+   "5642 Millinge"
+  ],
+  "phone": "+45 7022 0360",
+  "email": "faldsled@smartshop24-7.dk",
+  "facebookUrl": "https://www.facebook.com/smartshopfaldsled/",
+  "hours": [
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00"
+  ]
+ },
+ {
+  "slug": "skrydstrup",
+  "lat": 55.2422,
+  "lng": 9.2641,
+  "name": "Smart Shop 24-7 Skrydstrup",
+  "address": "Ribevej 74a, 6500 Vojens, Denmark",
+  "displayAddress": [
+   "Ribevej 74a",
+   "6500 Vojens"
+  ],
+  "phone": "+45 7022 0360",
+  "email": "skrydstrup@smartshop24-7.dk",
+  "facebookUrl": "https://www.facebook.com/Smartshopskrydstrup/",
+  "hours": [
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00",
+   "00:00 - 24:00"
+  ]
+ }
+]

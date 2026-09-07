@@ -1,0 +1,75 @@
+[
+ {
+  "id": "r-2026-09-02-1541",
+  "store": "Smart Shop Espe",
+  "address": "Assensvej 226, 5750 Ringe",
+  "date": "2026-09-02",
+  "time": "15:41",
+  "payment": "Smart Shop App · MasterCard ••4821",
+  "barcode": "260902154100418",
+  "lines": [
+   {
+    "group": "ENERGIDRIK, DÅSE",
+    "name": "MONSTER ENERGY PIPELINE",
+    "price": 36.95
+   },
+   {
+    "group": "SALGSPANT",
+    "name": "PANT A",
+    "price": 2.0
+   }
+  ]
+ },
+ {
+  "id": "r-2026-08-28-0912",
+  "store": "Smart Shop Ballum",
+  "address": "Vesterendevej 2, 6261 Bredebro",
+  "date": "2026-08-28",
+  "time": "09:12",
+  "payment": "Smart Shop App · MobilePay",
+  "barcode": "260828091200233",
+  "lines": [
+   {
+    "group": "MEJERI",
+    "name": "LETMÆLK 1 L",
+    "price": 12.5
+   },
+   {
+    "group": "BRØD",
+    "name": "RUGBRØD SKIVET",
+    "price": 24.95
+   },
+   {
+    "group": "KOLONIAL",
+    "name": "KAFFE 400 G",
+    "price": 44.0
+   }
+  ]
+ },
+ {
+  "id": "r-2026-08-19-2034",
+  "store": "Smart Shop Skrydstrup",
+  "address": "Ribevej 61, 6500 Vojens",
+  "date": "2026-08-19",
+  "time": "20:34",
+  "payment": "Smart Shop App · Visa Dankort ••1107",
+  "barcode": "260819203400097",
+  "lines": [
+   {
+    "group": "ØL",
+    "name": "TUBORG CLASSIC 6-PAK",
+    "price": 69.0
+   },
+   {
+    "group": "SALGSPANT",
+    "name": "PANT A x6",
+    "price": 6.0
+   },
+   {
+    "group": "SNACKS",
+    "name": "CHIPS SALT 175 G",
+    "price": 22.95
+   }
+  ]
+ }
+]
