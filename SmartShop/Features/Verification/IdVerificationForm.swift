@@ -139,7 +139,13 @@ struct IdVerificationForm: View {
     }
 
     private func side(label: String, hint: String, image: UIImage?, item: Binding<PhotosPickerItem?>) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        // Read out of the main actor up here: PhotosPicker's label builder is a
+        // Sendable closure, so `t` and `Theme` cannot be touched inside it.
+        let pickerTitle = image == nil ? t("verify.verify.chooseFile") : t("verify.verify.changeFile")
+        let pickerFont = Theme.display(.body, weight: .bold)
+        let green = Theme.Colors.green
+
+        return VStack(alignment: .leading, spacing: 8) {
             Text(label).font(Theme.body(.subheadline, weight: .semibold)).foregroundStyle(Theme.Colors.green)
             Text(hint).font(Theme.body(.caption)).foregroundStyle(Theme.Colors.green.opacity(0.6))
             if let image {
@@ -151,11 +157,11 @@ struct IdVerificationForm: View {
                     .accessibilityLabel(t("verify.verify.previewAlt"))
             }
             PhotosPicker(selection: item, matching: .images) {
-                Label(image == nil ? t("verify.verify.chooseFile") : t("verify.verify.changeFile"), systemImage: "square.and.arrow.up")
-                    .font(Theme.display(.body, weight: .bold))
-                    .foregroundStyle(Theme.Colors.green)
+                Label(pickerTitle, systemImage: "square.and.arrow.up")
+                    .font(pickerFont)
+                    .foregroundStyle(green)
                     .frame(maxWidth: .infinity, minHeight: 56)
-                    .background { Capsule().strokeBorder(Theme.Colors.green.opacity(0.6), lineWidth: 2) }
+                    .background { Capsule().strokeBorder(green.opacity(0.6), lineWidth: 2) }
             }
         }
         .padding(.top, 4)

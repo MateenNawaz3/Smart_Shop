@@ -5,6 +5,7 @@
 
 import Foundation
 import Supabase
+import Synchronization
 
 /// The device-local stand-in for Supabase, shared by every demo service.
 ///
@@ -13,7 +14,12 @@ import Supabase
 /// persisted to `UserDefaults`, so signing up, force-quitting and relaunching
 /// behaves the way it will in production — which is the point of a demo that is
 /// meant to show what the finished flow feels like.
-final class DemoBackend: @unchecked Sendable {
+/// `nonisolated` because it is reached from every isolation domain the app has —
+/// including an `AsyncStream.onTermination` handler, which runs wherever the
+/// consumer happened to stop listening. Its mutable state lives in a `Mutex`
+/// rather than behind an `@unchecked Sendable` promise, so the compiler checks
+/// the locking instead of taking our word for it.
+nonisolated final class DemoBackend: Sendable {
     static let shared = DemoBackend()
 
     /// One `profiles` row, plus the handful of `auth.users` fields the app reads.
@@ -66,36 +72,40 @@ final class DemoBackend: @unchecked Sendable {
         var at: Date
     }
 
+    /// Everything mutable, under one lock. Keeping the listener list in here
+    /// alongside the state means a broadcast cannot observe a half-applied write.
+    private struct Storage {
+        var state: State
+        var continuations: [UUID: AsyncStream<Session?>.Continuation] = [:]
+    }
+
     private let key = "smartshop.demo.state"
-    private let lock = NSLock()
-    private var state: State
-    private var continuations: [UUID: AsyncStream<Session?>.Continuation] = [:]
+    private let storage: Mutex<Storage>
 
     private init() {
+        let restored: State
         if let data = UserDefaults.standard.data(forKey: key),
            let decoded = try? JSONDecoder().decode(State.self, from: data) {
-            state = decoded
+            restored = decoded
         } else {
-            state = State()
+            restored = State()
         }
+        storage = Mutex(Storage(state: restored))
     }
 
     // MARK: Reading and writing
 
     func read<T>(_ body: (State) -> T) -> T {
-        lock.lock()
-        defer { lock.unlock() }
-        return body(state)
+        storage.withLock { body($0.state) }
     }
 
     func write(_ body: (inout State) -> Void) {
-        lock.lock()
-        body(&state)
-        let snapshot = state
-        if let data = try? JSONEncoder().encode(snapshot) {
-            UserDefaults.standard.set(data, forKey: key)
+        storage.withLock { storage in
+            body(&storage.state)
+            if let data = try? JSONEncoder().encode(storage.state) {
+                UserDefaults.standard.set(data, forKey: key)
+            }
         }
-        lock.unlock()
     }
 
     var account: Account? { read { $0.account } }
@@ -155,23 +165,19 @@ final class DemoBackend: @unchecked Sendable {
     func sessionUpdates() -> AsyncStream<Session?> {
         AsyncStream { continuation in
             let id = UUID()
-            lock.lock()
-            continuations[id] = continuation
-            lock.unlock()
+            storage.withLock { $0.continuations[id] = continuation }
             continuation.onTermination = { [weak self] _ in
-                guard let self else { return }
-                lock.lock()
-                continuations[id] = nil
-                lock.unlock()
+                self?.storage.withLock { $0.continuations[id] = nil }
             }
         }
     }
 
     private func broadcast() {
+        // `makeSession()` takes the lock itself, and `yield` runs arbitrary
+        // consumer code — so both stay outside `withLock`, which only copies
+        // the listener list.
         let session = makeSession()
-        lock.lock()
-        let targets = Array(continuations.values)
-        lock.unlock()
+        let targets = storage.withLock { Array($0.continuations.values) }
         for continuation in targets { continuation.yield(session) }
     }
 }
