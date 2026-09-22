@@ -60,7 +60,11 @@ final class DeviceState {
 }
 
 /// Minimal Keychain wrapper for small flags.
-enum Keychain {
+///
+/// `nonisolated` because the networking layer reads tokens off the main actor.
+/// The Security framework calls underneath are thread-safe, and the type holds
+/// no state of its own.
+nonisolated enum Keychain {
     private static let service = "dk.smartshop.app"
 
     private static func query(_ key: String) -> [String: Any] {
@@ -82,6 +86,21 @@ enum Keychain {
 
     static func exists(_ key: String) -> Bool {
         SecItemCopyMatching(query(key) as CFDictionary, nil) == errSecSuccess
+    }
+
+    /// Reads a stored value back. `exists` alone was enough while the only
+    /// entries were flags; the Mobile API's tokens have to be read, not just
+    /// counted.
+    static func get(_ key: String) -> String? {
+        var attributes = query(key)
+        attributes[kSecReturnData as String] = true
+        attributes[kSecMatchLimit as String] = kSecMatchLimitOne
+
+        var item: CFTypeRef?
+        guard SecItemCopyMatching(attributes as CFDictionary, &item) == errSecSuccess,
+              let data = item as? Data
+        else { return nil }
+        return String(decoding: data, as: UTF8.self)
     }
 
     static func remove(_ key: String) {

@@ -14,6 +14,7 @@ struct GuestStoresView: View {
 
     @Environment(\.strings) private var t
     @Environment(\.openURL) private var openURL
+    @Environment(StoreCatalog.self) private var catalog
 
     var body: some View {
         AppPageLayout(
@@ -27,13 +28,16 @@ struct GuestStoresView: View {
                 columns: [GridItem(.adaptive(minimum: 260), spacing: Theme.Spacing.sm)],
                 spacing: Theme.Spacing.sm
             ) {
-                ForEach(Store.all) { store in
+                ForEach(catalog.stores) { store in
                     card(for: store)
                 }
             }
 
             GuestCta(onCreateAccount: onCreateAccount, onLogIn: onLogIn)
         }
+        // Guest mode reads the same list as everyone else: both store endpoints
+        // use optional auth precisely so these screens can be shared.
+        .task { await catalog.load() }
     }
 
     private func card(for store: Store) -> some View {

@@ -10,14 +10,14 @@ struct FindStoreView: View {
     @Binding var path: [StoresRoute]
 
     @Environment(\.strings) private var t
-    @Environment(FavoritesStore.self) private var favorites
+    @Environment(StoreCatalog.self) private var catalog
 
     @State private var query = ""
 
     private var results: [Store] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !q.isEmpty else { return Store.all }
-        return Store.all.filter { store in
+        guard !q.isEmpty else { return catalog.stores }
+        return catalog.stores.filter { store in
             ([store.name] + store.displayAddress).joined(separator: " ").lowercased().contains(q)
         }
     }
@@ -30,6 +30,9 @@ struct FindStoreView: View {
             action: { favoritesButton },
             content: { content }
         )
+        // Refreshes in place. The bundled list is already on screen, so there
+        // is no spinner and no empty state while this runs.
+        .task { await catalog.load() }
     }
 
     /// Lime heart on a green oval, with a count badge when there are favourites.
@@ -42,8 +45,8 @@ struct FindStoreView: View {
                 .frame(width: 64, height: 44)
                 .background(Theme.Colors.green, in: .ellipse)
                 .overlay(alignment: .topTrailing) {
-                    if !favorites.slugs.isEmpty {
-                        Text("\(favorites.slugs.count)")
+                    if !catalog.favouriteSlugs.isEmpty {
+                        Text("\(catalog.favouriteSlugs.count)")
                             .font(Theme.display(.caption2, weight: .bold))
                             .foregroundStyle(Theme.Colors.green)
                             .padding(.horizontal, 6)

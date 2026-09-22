@@ -4,7 +4,6 @@
 //
 
 import Foundation
-import Supabase
 
 /// App-wide auth state — the single source of truth for which screen the app
 /// should be showing.
@@ -31,7 +30,7 @@ final class AuthSessionStore {
     }
 
     private(set) var phase: Phase = .loading
-    private(set) var session: Session?
+    private(set) var session: AuthSession?
     /// True while a multi-step sign-up (MitID → contact details → PIN, or the
     /// ID wizard) is in progress. The session exists from the first step, so
     /// without this hold the app would jump into the tab shell mid-flow.

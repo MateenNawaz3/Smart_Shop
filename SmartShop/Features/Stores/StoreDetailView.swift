@@ -14,13 +14,13 @@ struct StoreDetailView: View {
 
     @Environment(\.strings) private var t
     @Environment(\.openURL) private var openURL
-    @Environment(FavoritesStore.self) private var favorites
+    @Environment(StoreCatalog.self) private var catalog
     @Environment(AppEnvironment.self) private var environment
 
     @State private var myStore: MyStoreModel?
 
     var body: some View {
-        if let store = Store.named(slug) {
+        if let store = catalog.store(slug: slug) {
             page(for: store)
         } else {
             AppPageLayout(title: t("stores.storeNotFoundTitle")) {
@@ -43,10 +43,10 @@ struct StoreDetailView: View {
             },
             action: {
                 FavoriteButton(
-                    active: favorites.isFavorite(store.slug),
+                    active: catalog.isFavourite(store.slug),
                     label: store.shortName,
                     size: .medium
-                ) { favorites.toggle(store.slug) }
+                ) { Task { await catalog.toggleFavourite(store.slug) } }
             },
             content: {
                 if let myStore {

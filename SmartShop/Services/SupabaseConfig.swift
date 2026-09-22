@@ -18,7 +18,7 @@ import Supabase
 /// target. It bypasses every RLS policy, and anything shipped in an app bundle
 /// can be extracted in minutes. Server-side work that needs it belongs in a
 /// Supabase Edge Function — see `docs/mitid-edge-function.md`.
-enum SupabaseConfig {
+nonisolated enum SupabaseConfig {
     static let url = URL(string: "https://vjexegjpyzppjhqdfans.supabase.co")!
     static let publishableKey = "sb_publishable_VrXGbpFOGXCYm66UimohvQ_IMo0j2ii"
 
@@ -28,7 +28,7 @@ enum SupabaseConfig {
     static let redirectURL = URL(string: "smartshop://auth-callback")!
 }
 
-extension SupabaseClient {
+nonisolated extension SupabaseClient {
     /// The app's shared client. Session storage defaults to the Keychain in
     /// supabase-swift, so tokens survive relaunch and are protected by the
     /// device passcode — a genuine improvement over the web's `localStorage`.

@@ -17,20 +17,25 @@ import Supabase
 /// `mitid.server.ts` writes, so web and app stay interchangeable:
 ///
 ///     pbkdf2$100000$<salt hex>$<derived key hex>
-protocol PinService: Sendable {
+nonisolated protocol PinService: Sendable {
     func setPin(_ pin: String) async throws
     func verifyPin(_ pin: String) async throws -> PinCheck
     func hasPin() async throws -> Bool
 }
 
-enum PinCheck: Sendable {
+nonisolated enum PinCheck: Sendable, Equatable {
     case correct
-    case wrong
-    /// No PIN stored on the account — the gate should let the user through.
+    /// Wrong PIN. `attemptsLeft` is the server's count, and nil for the
+    /// backends that keep no count — the screen then falls back to its own.
+    case wrong(attemptsLeft: Int?)
+    /// No PIN stored — the gate should let the user through.
     case notSet
+    /// Too many wrong entries. The device is shut out for this many seconds,
+    /// and the correct PIN will not open it until they elapse.
+    case locked(forSeconds: Int)
 }
 
-struct SupabasePinService: PinService {
+nonisolated struct SupabasePinService: PinService {
     var client: SupabaseClient = .shared
 
     private struct PinRow: Decodable { let pin_hash: String? }
@@ -46,7 +51,7 @@ struct SupabasePinService: PinService {
 
     func verifyPin(_ pin: String) async throws -> PinCheck {
         guard let stored = try await storedHash() else { return .notSet }
-        return PinHash.matches(pin, stored) ? .correct : .wrong
+        return PinHash.matches(pin, stored) ? .correct : .wrong(attemptsLeft: nil)
     }
 
     func hasPin() async throws -> Bool {
@@ -71,7 +76,7 @@ struct SupabasePinService: PinService {
 /// PBKDF2-SHA256, 100 000 iterations, 16-byte salt, 32-byte key.
 ///
 /// Port of `hashPin` / `comparePin` in `src/lib/mitid.server.ts`.
-enum PinHash {
+nonisolated enum PinHash {
     static let iterations: UInt32 = 100_000
     private static let saltBytes = 16
     private static let keyBytes = 32
@@ -119,7 +124,7 @@ enum PinHash {
     }
 }
 
-private extension Array where Element == UInt8 {
+nonisolated private extension Array where Element == UInt8 {
     var hex: String { map { String(format: "%02x", $0) }.joined() }
 
     init?(hex: String) {

@@ -92,12 +92,10 @@ struct AuthFlowView: View {
                             session: session
                         )
                     case .mitID:
-                        MitIDView(
-                            mitID: environment.mitIDService,
-                            auth: environment.authService,
-                            device: device,
-                            session: session
-                        )
+                        // The real browser round trip. `MitIDView`'s simulated
+                        // flow is kept for now as the Supabase-era fallback,
+                        // but nothing routes to it.
+                        MitIDSignInView()
                     case .pinSetup:
                         PinSetupView()
                     }

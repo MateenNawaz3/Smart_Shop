@@ -9,7 +9,7 @@ import SwiftUI
 /// optional opening-hours chip, chevron. The `<li>` in `find-butik.tsx`.
 struct StoreRow: View {
     @Environment(\.strings) private var t
-    @Environment(FavoritesStore.self) private var favorites
+    @Environment(StoreCatalog.self) private var catalog
 
     let store: Store
     /// The Find store list shows an opening-hours chip; the favourites list does not.
@@ -18,8 +18,8 @@ struct StoreRow: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.sm + 4) {
-            FavoriteButton(active: favorites.isFavorite(store.slug), label: store.shortName) {
-                favorites.toggle(store.slug)
+            FavoriteButton(active: catalog.isFavourite(store.slug), label: store.shortName) {
+                Task { await catalog.toggleFavourite(store.slug) }
             }
 
             Button(action: onOpen) {

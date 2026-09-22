@@ -16,7 +16,8 @@ struct SmartShopApp: App {
     @State private var device = DeviceState()
     @State private var session: AuthSessionStore
     @State private var languages = LanguageStore()
-    @State private var favorites = FavoritesStore()
+    @State private var catalog: StoreCatalog
+    @State private var mitIDSignIn: MitIDSignInCoordinator
     @State private var profileCache = ProfileCache()
 
     init() {
@@ -33,6 +34,10 @@ struct SmartShopApp: App {
         _session = State(
             initialValue: AuthSessionStore(auth: environment.authService, device: device)
         )
+        _catalog = State(initialValue: StoreCatalog(service: environment.storeService))
+        _mitIDSignIn = State(
+            initialValue: MitIDSignInCoordinator(auth: environment.mitIDSignIn)
+        )
     }
 
     var body: some Scene {
@@ -43,7 +48,8 @@ struct SmartShopApp: App {
                 .environment(device)
                 .environment(session)
                 .environment(languages)
-                .environment(favorites)
+                .environment(catalog)
+                .environment(mitIDSignIn)
                 .environment(profileCache)
                 // Re-published as a value so changing language re-renders
                 // every view that reads a string.
@@ -52,14 +58,26 @@ struct SmartShopApp: App {
         }
     }
 
-    /// Password-recovery and email-confirmation links come back as
-    /// `smartshop://auth-callback#access_token=…&type=recovery`.
+    /// Deep links the app answers:
+    ///
+    ///   - `smartshop://mitid?status=…&reference=…&state=…` — a MitID return
+    ///   - `smartshop://auth-callback#access_token=…&type=recovery` — password
+    ///     recovery and email confirmation
     ///
     /// The web has to defend against these landing on the wrong route (see
     /// `src/lib/recovery.ts`); on iOS there is exactly one entry point, so the
     /// handling is a single function.
     private func handle(_ url: URL) {
         guard url.scheme == SupabaseConfig.redirectURL.scheme else { return }
+
+        // A MitID return. The deep link arrives at the app rather than at a
+        // screen, so it is routed to the coordinator regardless of what is on
+        // screen — the browser trip may well have outlived the view that
+        // started it.
+        if let callback = MitIDCallback(url: url) {
+            Task { await mitIDSignIn.handle(callback) }
+            return
+        }
 
         let fragment = URLComponents(string: "?" + (url.fragment() ?? ""))
         let query = URLComponents(url: url, resolvingAgainstBaseURL: false)

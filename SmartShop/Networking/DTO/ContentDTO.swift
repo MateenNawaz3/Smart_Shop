@@ -3,15 +3,22 @@
 //  SmartShop
 //
 
-// STRUCTURE ONLY — not implemented yet.
-//
+import Foundation
+
 // Wire types for:
 //
 //   GET /mobile/pages
 //   GET /mobile/pages/{key}
-//   GET /mobile/posts
-//   GET /mobile/posts/{id}
-//   GET /mobile/banners
 //
-// Pages, bulletin-board posts and promotional banners.
-// Page keys: about, faq, how_to_shop, good_to_know.
+// Bulletin-board posts and promotional banners belong to module 5 and are not
+// implemented yet.
+//
+// Page CONTENT comes from here; UI LABELS come from /mobile/translations. The
+// two are deliberately separate.
+
+nonisolated struct PageDTO: Decodable, Sendable {
+    var key: String
+    var title: String
+    var body: String
+    var updatedAt: Date?
+}

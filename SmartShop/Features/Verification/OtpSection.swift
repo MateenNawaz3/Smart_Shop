@@ -17,6 +17,9 @@ struct OtpSection: View {
     var initialDestination = ""
     var alreadyVerified = false
     var onVerified: () -> Void = {}
+    /// The address or number that was just verified. The sign-up wizard needs
+    /// the email to register with, and only this view knows what was typed.
+    var onVerifiedDestination: (String) -> Void = { _ in }
 
     @Environment(\.strings) private var t
     @Environment(AppEnvironment.self) private var environment
@@ -167,6 +170,7 @@ struct OtpSection: View {
             case .ok:
                 done = true
                 demoCode = nil
+                onVerifiedDestination(destination.trimmingCharacters(in: .whitespaces))
                 onVerified()
             case .expired: error = t("\(k).errors.expired")
             case .attempts: error = t("\(k).errors.attempts")

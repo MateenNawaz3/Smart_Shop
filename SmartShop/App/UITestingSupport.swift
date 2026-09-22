@@ -28,6 +28,13 @@ enum UITesting {
     /// `-uiTestingOnboarding` starts the signed-in session on the onboarding guide.
     static var showsOnboarding: Bool { arguments.contains("-uiTestingOnboarding") }
 
+    /// `UITEST_LIVE_API=1` lets a test opt back into the real Mobile API.
+    ///
+    /// UI tests otherwise run on bundled data so they need no network. One test
+    /// deliberately does not: the point of it is to prove the app really reads
+    /// the API, which nothing can show while every service is a stand-in.
+    static var usesLiveAPI: Bool { environment["UITEST_LIVE_API"] == "1" }
+
     static var isActive: Bool {
         environment["UITEST"] == "1" || arguments.contains("-uiTesting") || isSignedIn
     }

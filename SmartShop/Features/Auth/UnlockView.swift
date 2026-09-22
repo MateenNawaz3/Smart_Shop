@@ -18,9 +18,13 @@ final class UnlockModel {
     var errorKey: String?
     var attempts = 0
     var isChecking = false
+    /// Set when the *server* says this device is shut out. It is authoritative
+    /// when present — the local `attempts` tally is only a fallback for the
+    /// backends that keep no count of their own.
+    var lockedForSeconds: Int?
 
     /// Same limit as the web: five wrong tries and the PIN route is closed.
-    var isLockedOut: Bool { attempts >= 5 }
+    var isLockedOut: Bool { lockedForSeconds != nil || attempts >= 5 }
 
     private let pins: any PinService
     private let device: DeviceState
@@ -46,8 +50,22 @@ final class UnlockModel {
                 // don't strand the user behind a gate nothing can open.
                 device.clearPinOnDevice()
                 unlock()
-            case .wrong:
-                attempts += 1
+            case .wrong(let attemptsLeft):
+                // The server counts down; a backend that does not keep a count
+                // leaves this nil and the local tally stands in.
+                if let attemptsLeft {
+                    attempts = max(0, 5 - attemptsLeft)
+                } else {
+                    attempts += 1
+                }
+                errorKey = "mitid.unlockWrong"
+                pin = ""
+                UINotificationFeedbackGenerator().notificationOccurred(.error)
+            case .locked(let seconds):
+                // The correct PIN will not open it until this elapses, so say
+                // so rather than inviting another try.
+                lockedForSeconds = seconds
+                attempts = 5
                 errorKey = "mitid.unlockWrong"
                 pin = ""
                 UINotificationFeedbackGenerator().notificationOccurred(.error)
@@ -80,6 +98,8 @@ final class UnlockModel {
     }
 
     private func unlock() {
+        attempts = 0
+        lockedForSeconds = nil
         device.markUnlocked()
         session.recompute()
     }

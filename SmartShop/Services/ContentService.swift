@@ -3,14 +3,31 @@
 //  SmartShop
 //
 
-// STRUCTURE ONLY — not implemented yet.
-//
-// Protocol, plus its API and demo conformances.
-//
-// Follows the existing convention in this folder: the protocol and every
-// implementation of it live together in one file.
-//
-// Static pages, bulletin-board posts and promotional banners.
-//
-// Serving copy from the database rather than the string catalog is the
-// point: fixing a typo becomes an edit, not an App Store release.
+import Foundation
+
+/// Static pages.
+///
+/// Serving copy from the database rather than the string catalog is the point:
+/// fixing a typo becomes an edit, not an App Store release.
+///
+/// Bulletin-board posts and promotional banners belong to module 5 and are not
+/// here yet.
+nonisolated protocol ContentService: Sendable {
+    /// Every page in one call, so the app can cache them at launch.
+    func pages() async throws -> [Page]
+    /// One page. An unknown key is an error rather than an empty page — a
+    /// broken deep link should be loud.
+    func page(key: String) async throws -> Page
+}
+
+nonisolated struct PageNotFound: LocalizedError {
+    var key: String
+    var errorDescription: String? { "No page '\(key)'." }
+}
+
+/// Answers nothing, for the build that still reads its copy from the string
+/// catalog. The info screens keep their compiled text until they are moved over.
+nonisolated struct UnavailableContentService: ContentService {
+    func pages() async throws -> [Page] { [] }
+    func page(key: String) async throws -> Page { throw PageNotFound(key: key) }
+}

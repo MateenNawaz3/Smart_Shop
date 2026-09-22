@@ -21,6 +21,14 @@ final class AppEnvironment {
     let otpService: any OtpService
     let verificationService: any VerificationService
     let wheelService: any WheelService
+    let storeService: any StoreService
+    /// The backend a MitID sign-in talks to.
+    ///
+    /// Separate from `authService` on purpose. MitID sign-in exists only on the
+    /// Mobile API — `SupabaseMitIDService` was always a stub — so this points
+    /// there while everything else is still on Supabase. When `authService`
+    /// moves to `APIAuthService` the two become the same thing and this can go.
+    let mitIDSignIn: any AuthService
 
     init(
         authService: any AuthService,
@@ -31,7 +39,9 @@ final class AppEnvironment {
         idSignupService: any IdSignupService = UnavailableIdSignupService(),
         otpService: any OtpService = SupabaseOtpService(),
         verificationService: any VerificationService = SupabaseVerificationService(),
-        wheelService: any WheelService = SupabaseWheelService()
+        wheelService: any WheelService = SupabaseWheelService(),
+        storeService: any StoreService = BundledStoreService(),
+        mitIDSignIn: (any AuthService)? = nil
     ) {
         self.authService = authService
         self.pinService = pinService
@@ -42,6 +52,8 @@ final class AppEnvironment {
         self.otpService = otpService
         self.verificationService = verificationService
         self.wheelService = wheelService
+        self.storeService = storeService
+        self.mitIDSignIn = mitIDSignIn ?? APIAuthService()
     }
 
     /// Production wiring.
@@ -63,7 +75,14 @@ final class AppEnvironment {
                 idSignupService: DemoIdSignupService(backend: backend),
                 otpService: DemoOtpService(backend: backend),
                 verificationService: DemoVerificationService(backend: backend),
-                wheelService: DemoWheelService(backend: backend)
+                wheelService: DemoWheelService(backend: backend),
+                // Demo mode exists because account creation needs Edge
+                // Functions that are not deployed. Stores have no such
+                // constraint — they are public and need no session — so even
+                // the demo build reads them from the Mobile API.
+                storeService: UITesting.isActive && !UITesting.usesLiveAPI
+                    ? BundledStoreService()
+                    : APIStoreService()
             )
         }
 
@@ -77,7 +96,12 @@ final class AppEnvironment {
             offerService: BundledOfferService(),
             idSignupService: SupabaseIdSignupService(),
             otpService: UITesting.isSignedIn ? DemoOtpService() : SupabaseOtpService(),
-            verificationService: UITesting.isSignedIn ? StubVerificationService() : SupabaseVerificationService()
+            verificationService: UITesting.isSignedIn ? StubVerificationService() : SupabaseVerificationService(),
+            // Module 4 is the first slice to run against the Mobile API. UI
+            // tests stay on the bundled list so they need no network.
+            storeService: UITesting.isActive && !UITesting.usesLiveAPI
+                    ? BundledStoreService()
+                    : APIStoreService()
         )
     }
 }

@@ -60,7 +60,13 @@ final class LanguageStore {
     private static let key = "smartshop-lang"
 
     private(set) var language: AppLanguage {
-        didSet { bundle = Self.bundle(for: language) }
+        didSet {
+            bundle = Self.bundle(for: language)
+            // Every API request advertises the language the UI is showing, and
+            // the client reads it from here rather than hopping to the main
+            // actor on every call.
+            APILocalization.shared.current = language.rawValue
+        }
     }
 
     /// The `.lproj` bundle the chosen language's strings are read from.
@@ -72,6 +78,8 @@ final class LanguageStore {
         let language = UITesting.forcedLanguage ?? stored ?? Self.devicePreferred
         self.language = language
         self.bundle = Self.bundle(for: language)
+        // `didSet` does not fire during init, so seed it explicitly.
+        APILocalization.shared.current = language.rawValue
     }
 
     func select(_ language: AppLanguage) {

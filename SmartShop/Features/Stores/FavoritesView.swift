@@ -16,7 +16,7 @@ struct FavoritesView: View {
     var onFindStore: () -> Void
 
     @Environment(\.strings) private var t
-    @Environment(FavoritesStore.self) private var favorites
+    @Environment(StoreCatalog.self) private var catalog
 
     var body: some View {
         AppPageLayout(
@@ -25,7 +25,7 @@ struct FavoritesView: View {
         ) {
             GuestBackLink(title: backTitle, action: onBack)
         } content: {
-            if favorites.stores.isEmpty {
+            if catalog.favourites.isEmpty {
                 VStack(spacing: Theme.Spacing.lg) {
                     Text(t("stores.noFavoritesYet"))
                         .font(Theme.body(.subheadline))
@@ -41,11 +41,11 @@ struct FavoritesView: View {
                 .background(Theme.Colors.lime.opacity(0.1), in: .rect(cornerRadius: Theme.Radius.card))
             } else {
                 LazyVStack(spacing: 12) {
-                    ForEach(favorites.stores) { store in
+                    ForEach(catalog.favourites) { store in
                         StoreRow(store: store, showsHours: false) { onOpenStore(store.slug) }
                     }
                 }
-                .animation(.easeOut(duration: 0.2), value: favorites.slugs)
+                .animation(.easeOut(duration: 0.2), value: catalog.favouriteSlugs)
             }
         }
     }

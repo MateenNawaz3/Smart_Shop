@@ -79,7 +79,7 @@ struct ContestsView: View {
         VStack(alignment: .leading, spacing: 8) {
             switch r.outcome {
             case .win:
-                Text(t("wheel.winTitle").replacingOccurrences(of: "{amount}", with: "\(r.prizeAmount ?? 0)"))
+                Text(t("wheel.winTitle").replacingOccurrences(of: "{amount}", with: "\(r.prizeAmount.orZero)"))
                     .font(Theme.display(.title2)).foregroundStyle(Theme.Colors.green)
                 Text(t("wheel.winDesc")).font(Theme.body(.subheadline)).foregroundStyle(Theme.Colors.green.opacity(0.75)).lineSpacing(3)
                 if let code = r.code {

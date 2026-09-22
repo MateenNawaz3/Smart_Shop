@@ -12,7 +12,7 @@ import CoreLocation
 /// rather than being transcribed into Swift. Keeping it as data means the file
 /// can be regenerated from the web project verbatim when a store opens or
 /// moves, with no code change and no chance of a typo in an address.
-struct Store: Identifiable, Hashable, Codable, Sendable {
+nonisolated struct Store: Identifiable, Hashable, Codable, Sendable {
     var slug: String
     var name: String
     /// Geocoder-friendly address, including the country.
@@ -28,6 +28,21 @@ struct Store: Identifiable, Hashable, Codable, Sendable {
     var alwaysOpen: Bool?
     var lat: Double
     var lng: Double
+
+    /// The Mobile API's own identifier.
+    ///
+    /// The app has always keyed a store by its slug, and deep links depend on
+    /// that, so the slug stays the identity. But **favourites and my-store are
+    /// addressed by this id**, not by the slug, so a store that came from the
+    /// API carries both. Nil for the bundled `stores.json` records.
+    var remoteID: String?
+    /// Distance from the point the list was sorted against, when there was one.
+    var distanceKm: Double?
+    /// Whether this is one of my favourites. Nil when nobody was signed in, as
+    /// distinct from `false` meaning "asked, and it is not".
+    var isFavourite: Bool?
+    /// Whether this is my chosen store.
+    var isMyStore: Bool?
 
     var id: String { slug }
 
@@ -58,7 +73,38 @@ struct Store: Identifiable, Hashable, Codable, Sendable {
     }
 }
 
-extension Store {
+nonisolated extension Store {
+    /// Builds a store from the Mobile API's shape.
+    ///
+    /// The two shapes disagree about addresses and hours, so both are composed
+    /// here rather than at each call site.
+    init(_ dto: StoreDTO) {
+        let street = dto.addressLine1 ?? ""
+        let town = [dto.postalCode, dto.city].compactMap { $0 }.joined(separator: " ")
+        let alwaysOpen = dto.alwaysOpen ?? dto.openingHours?.open247 ?? true
+
+        self.init(
+            slug: dto.slug,
+            name: dto.name,
+            // Geocoder-friendly, and the country is part of that.
+            address: [street, town, dto.country ?? "DK"]
+                .filter { !$0.isEmpty }
+                .joined(separator: ", "),
+            displayAddress: [street, town].filter { !$0.isEmpty },
+            phone: dto.phone ?? "",
+            email: dto.email ?? "",
+            facebookUrl: dto.facebookUrl ?? "",
+            hours: alwaysOpen ? [] : (dto.openingHours?.weekly ?? []),
+            alwaysOpen: alwaysOpen,
+            lat: dto.latitude ?? 0,
+            lng: dto.longitude ?? 0,
+            remoteID: dto.id,
+            distanceKm: dto.distanceKm,
+            isFavourite: dto.isFavourite,
+            isMyStore: dto.isPreferred
+        )
+    }
+
     /// All stores, decoded once. A decode failure here is a build/packaging
     /// error, not a runtime condition, so it trips in debug rather than
     /// silently shipping an empty store list.

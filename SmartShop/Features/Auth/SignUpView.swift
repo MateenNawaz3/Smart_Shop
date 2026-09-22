@@ -5,15 +5,18 @@
 
 import SwiftUI
 
-/// The four-step ID sign-up wizard. Port of `src/routes/opret-konto.tsx`.
+/// The five-step ID sign-up wizard. Port of `src/routes/opret-konto.tsx`,
+/// plus a password step the web does not have.
 ///
-/// Step 1 collects name and address and creates the account through the
-/// ID sign-up function; there is no password. Then the ID document, a phone
-/// code and an email code, and the onboarding guide takes over.
+/// Step 1 collects name and address, then the ID document, a phone code and an
+/// email code. Step 5 chooses a password: the web never needed one, because
+/// sign-in there is by one-time code or MitID, but the Mobile API's
+/// `POST /auth/register` requires a password and there is no endpoint that sets
+/// one afterwards without knowing the current one.
 @MainActor
 @Observable
 final class SignUpModel {
-    enum Field: Hashable { case fornavn, efternavn, adresse, postnr, by }
+    enum Field: Hashable { case fornavn, efternavn, adresse, postnr, by, password, confirm }
 
     var step = 1
     var fornavn = ""
@@ -23,6 +26,12 @@ final class SignUpModel {
     var by = ""
     var acceptedTerms = false
     var wantsMarketing = false
+    var password = ""
+    var confirmPassword = ""
+    /// Captured from the email step, because registering needs an address to
+    /// register *with* and only that step knows what was typed.
+    var verifiedEmail = ""
+    var passwordSaved = false
     /// Field -> error *key*; the view translates on display.
     var errors: [Field: String] = [:]
     var termsErrorKey: String?
@@ -95,10 +104,52 @@ final class SignUpModel {
     }
 
     func advance() {
-        if step < 4 {
+        if step < 5 {
             step += 1
         } else {
             session.finishEnrollment()
+        }
+    }
+
+    /// Step 5. Same rules the rest of the app applies to a new password:
+    /// at least 8 characters, and typed the same way twice.
+    func savePassword() async {
+        formErrorKey = nil
+        var next: [Field: String] = [:]
+        if password.isEmpty {
+            next[.password] = "signup.errors.enterPassword"
+        } else if password.count < 8 {
+            next[.password] = "signup.errors.passwordTooShort"
+        }
+        if confirmPassword.isEmpty {
+            next[.confirm] = "signup.errors.repeatPassword"
+        } else if confirmPassword != password {
+            next[.confirm] = "signup.errors.passwordsDontMatch"
+        }
+        errors = next
+        guard next.isEmpty else { return }
+
+        isSubmitting = true
+        defer { isSubmitting = false }
+
+        let trim = { (s: String) in s.trimmingCharacters(in: .whitespacesAndNewlines) }
+        do {
+            try await auth.setSignUpPassword(
+                password,
+                email: verifiedEmail,
+                profile: SignUpProfile(
+                    fornavn: trim(fornavn), efternavn: trim(efternavn),
+                    adresse: trim(adresse), postnr: trim(postnr), by: trim(by),
+                    telefon: "", markedsforing: wantsMarketing,
+                    acceptsTerms: acceptedTerms
+                )
+            )
+            password = ""
+            confirmPassword = ""
+            passwordSaved = true
+            session.finishEnrollment()
+        } catch {
+            formErrorKey = "signup.errors.passwordGeneric"
         }
     }
 }
@@ -112,7 +163,7 @@ struct SignUpView: View {
     }
 
     private var stepLabels: [String] {
-        ["details", "id", "phone", "email"].map { t("signup.steps.\($0)") }
+        ["details", "id", "phone", "email", "password"].map { t("signup.steps.\($0)") }
     }
 
     var body: some View {
@@ -131,7 +182,14 @@ struct SignUpView: View {
                         case 2: IdVerificationForm { model.advance() }
                             .padding(4).background(.white.opacity(0.95), in: .rect(cornerRadius: Theme.Radius.card))
                         case 3: OtpSection(kind: .phone, tone: .dark) { model.advance() }
-                        default: OtpSection(kind: .email, tone: .dark) { model.advance() }
+                        case 4:
+                            OtpSection(
+                                kind: .email,
+                                tone: .dark,
+                                onVerified: { model.advance() },
+                                onVerifiedDestination: { model.verifiedEmail = $0 }
+                            )
+                        default: passwordForm
                         }
 
                         if model.step == 1 {
@@ -165,7 +223,7 @@ struct SignUpView: View {
     /// Numbered circles: lime tick when passed, white when active, dim otherwise.
     private var stepIndicator: some View {
         HStack(spacing: 8) {
-            ForEach(1...4, id: \.self) { n in
+            ForEach(1...5, id: \.self) { n in
                 let passed = model.step > n
                 let active = model.step == n
                 Group {
@@ -184,6 +242,71 @@ struct SignUpView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(t("signup.title"))
+    }
+
+    /// Step 5. Deliberately the same card as "Change password" in My details —
+    /// it is the same job, and someone who has seen one should recognise the
+    /// other.
+    @ViewBuilder
+    private var passwordForm: some View {
+        @Bindable var model = model
+        GuestCard {
+            VStack(alignment: .leading, spacing: 20) {
+                Text(t("signup.password.title"))
+                    .font(Theme.display(.title2, weight: .bold))
+                    .foregroundStyle(Theme.Colors.green)
+
+                if model.passwordSaved {
+                    HStack(spacing: 12) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(Theme.Colors.lime)
+                        Text(t("signup.password.saved"))
+                            .font(Theme.body(.subheadline))
+                            .foregroundStyle(Theme.Colors.green)
+                    }
+                } else {
+                    Text(t("signup.password.subtitle"))
+                        .font(Theme.body(.subheadline))
+                        .foregroundStyle(Theme.Colors.green.opacity(0.75))
+
+                    BrandTextField(
+                        label: t("signup.password.newPassword"),
+                        text: $model.password,
+                        error: model.errors[.password].map { t($0) },
+                        isSecure: true,
+                        contentType: .newPassword,
+                        tone: .onLight
+                    )
+                    BrandTextField(
+                        label: t("signup.password.repeatPassword"),
+                        text: $model.confirmPassword,
+                        error: model.errors[.confirm].map { t($0) },
+                        isSecure: true,
+                        contentType: .newPassword,
+                        tone: .onLight
+                    )
+
+                    Button(
+                        model.isSubmitting
+                            ? t("signup.password.saving")
+                            : t("signup.password.save")
+                    ) {
+                        Task { await model.savePassword() }
+                    }
+                    .buttonStyle(LeaveGuestButtonStyle())
+                    .disabled(model.isSubmitting)
+                    .opacity(model.isSubmitting ? 0.6 : 1)
+
+                    if let key = model.formErrorKey {
+                        Text(t(key))
+                            .font(Theme.body(.subheadline))
+                            .foregroundStyle(Theme.Colors.red)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, Theme.Spacing.md)
     }
 
     @ViewBuilder

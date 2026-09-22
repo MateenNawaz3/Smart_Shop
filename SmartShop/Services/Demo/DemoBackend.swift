@@ -76,7 +76,7 @@ nonisolated final class DemoBackend: Sendable {
     /// alongside the state means a broadcast cannot observe a half-applied write.
     private struct Storage {
         var state: State
-        var continuations: [UUID: AsyncStream<Session?>.Continuation] = [:]
+        var continuations: [UUID: AsyncStream<AuthSession?>.Continuation] = [:]
     }
 
     private let key = "smartshop.demo.state"
@@ -122,27 +122,9 @@ nonisolated final class DemoBackend: Sendable {
 
     // MARK: Session
 
-    /// A syntactically valid `Session` so `AuthSessionStore` behaves normally.
-    /// Nothing reads its contents — the app only ever checks it for nil.
-    func makeSession() -> Session? {
+    func makeSession() -> AuthSession? {
         guard let account = read({ $0.account }), read({ $0.signedIn }) else { return nil }
-        let user = User(
-            id: account.userID,
-            appMetadata: [:],
-            userMetadata: [:],
-            aud: "authenticated",
-            email: account.email,
-            createdAt: .now,
-            updatedAt: .now
-        )
-        return Session(
-            accessToken: "demo-access-token",
-            tokenType: "bearer",
-            expiresIn: 3600,
-            expiresAt: Date.now.addingTimeInterval(3600).timeIntervalSince1970,
-            refreshToken: "demo-refresh-token",
-            user: user
-        )
+        return AuthSession(userID: account.userID.uuidString, email: account.email)
     }
 
     func signIn() {
@@ -162,7 +144,7 @@ nonisolated final class DemoBackend: Sendable {
         broadcast()
     }
 
-    func sessionUpdates() -> AsyncStream<Session?> {
+    func sessionUpdates() -> AsyncStream<AuthSession?> {
         AsyncStream { continuation in
             let id = UUID()
             storage.withLock { $0.continuations[id] = continuation }

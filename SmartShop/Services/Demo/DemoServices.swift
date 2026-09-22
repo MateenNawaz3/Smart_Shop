@@ -22,9 +22,9 @@ struct DemoAuthService: AuthService {
         var errorDescription: String? { message }
     }
 
-    func currentSession() async -> Session? { backend.makeSession() }
+    func currentSession() async -> AuthSession? { backend.makeSession() }
 
-    func sessionUpdates() -> AsyncStream<Session?> { backend.sessionUpdates() }
+    func sessionUpdates() -> AsyncStream<AuthSession?> { backend.sessionUpdates() }
 
     func signIn(email: String, password: String) async throws {
         await DemoMode.pause()
@@ -245,7 +245,7 @@ struct DemoPinService: PinService {
     func verifyPin(_ pin: String) async throws -> PinCheck {
         await DemoMode.pause(0.3)
         guard let stored = backend.account?.pinHash else { return .notSet }
-        return PinHash.matches(pin, stored) ? .correct : .wrong
+        return PinHash.matches(pin, stored) ? .correct : .wrong(attemptsLeft: nil)
     }
 
     func hasPin() async throws -> Bool { backend.account?.pinHash != nil }
@@ -322,14 +322,14 @@ struct DemoWheelService: WheelService {
         if alwaysWin { return nil }
         guard let spin = backend.read({ $0.spins.first { $0.date == today } }) else { return nil }
         return SpinResult(alreadySpun: true, outcome: spin.won ? .win : .lose,
-                          prizeAmount: spin.prizeAmount, code: spin.code, spinDate: spin.date)
+                          prizeAmount: spin.prizeAmount.map { Kroner($0) }, code: spin.code, spinDate: spin.date)
     }
 
     func wins() async throws -> [WheelWin] {
         backend.read { state in
             state.spins.filter(\.won).sorted { $0.date > $1.date }.compactMap { spin in
                 guard let amount = spin.prizeAmount, let code = spin.code else { return nil }
-                return WheelWin(id: spin.id, prizeAmount: amount, code: code, spinDate: spin.date)
+                return WheelWin(id: spin.id, prizeAmount: Kroner(amount), code: code, spinDate: spin.date)
             }
         }
     }
@@ -338,7 +338,7 @@ struct DemoWheelService: WheelService {
         await DemoMode.pause(0.5)
 
         if alwaysWin {
-            let result = SpinResult(alreadySpun: false, outcome: .win, prizeAmount: 50,
+            let result = SpinResult(alreadySpun: false, outcome: .win, prizeAmount: Kroner(50),
                                     code: SupabaseWheelService.generateBarcode(), spinDate: today)
             backend.write { $0.spins.insert(.init(date: today, won: true, prizeAmount: 50, code: result.code), at: 0) }
             return result
@@ -346,7 +346,7 @@ struct DemoWheelService: WheelService {
 
         if let existing = backend.read({ $0.spins.first { $0.date == today } }) {
             return SpinResult(alreadySpun: true, outcome: existing.won ? .win : .lose,
-                              prizeAmount: existing.prizeAmount, code: existing.code, spinDate: existing.date)
+                              prizeAmount: existing.prizeAmount.map { Kroner($0) }, code: existing.code, spinDate: existing.date)
         }
 
         // The web's odds: 15% win, 45% try again, the rest a loss.
@@ -354,7 +354,7 @@ struct DemoWheelService: WheelService {
         if roll < 0.15 {
             let code = SupabaseWheelService.generateBarcode()
             backend.write { $0.spins.insert(.init(date: today, won: true, prizeAmount: 50, code: code), at: 0) }
-            return SpinResult(alreadySpun: false, outcome: .win, prizeAmount: 50, code: code, spinDate: today)
+            return SpinResult(alreadySpun: false, outcome: .win, prizeAmount: Kroner(50), code: code, spinDate: today)
         }
         if roll < 0.60 {
             // "Try again" does not use up the day's spin.
