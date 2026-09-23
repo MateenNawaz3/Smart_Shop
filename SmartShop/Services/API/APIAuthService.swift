@@ -243,15 +243,35 @@ nonisolated final class APIAuthService: AuthService {
         let result: MitIDSignInResultDTO = try await client.send(request)
 
         tokens.save(accessToken: result.accessToken, refreshToken: result.refreshToken)
+        // A MitID account has no email until the customer gives us one, so the
+        // session's is empty rather than absent — `AuthSession.email` is only
+        // ever read for display.
         let session = AuthSession(
             userID: result.customer.id,
-            email: result.customer.email
+            email: result.customer.email ?? ""
         )
         listeners.broadcast(session)
 
         return MitIDSignInOutcome(
             session: session,
-            didRegister: result.registered ?? false
+            didRegister: result.registered ?? false,
+            profile: MitIDProfile(
+                // A Danish *mellemnavn* is part of the given name, not the
+                // surname, so it rides with the first name. Dropping it would
+                // quietly shorten someone's name on their own receipt.
+                firstName: [result.customer.firstName, result.customer.middleName]
+                    .compactMap { $0?.isEmpty == false ? $0 : nil }
+                    .joined(separator: " ")
+                    .nilWhenEmpty,
+                lastName: result.customer.lastName,
+                email: result.customer.email,
+                phone: result.customer.phone,
+                dateOfBirth: result.customer.dateOfBirth,
+                gender: result.customer.gender,
+                addressLine1: result.customer.addressLine1,
+                postalCode: result.customer.postalCode,
+                city: result.customer.city
+            )
         )
     }
 
@@ -264,6 +284,11 @@ nonisolated final class APIAuthService: AuthService {
         )
     }
 
+    /// No token hashes here, so the two enrolment flows built on them cannot
+    /// run against this backend. The screens check this rather than calling
+    /// `verifyEmailToken` and reporting the refusal as a generic error.
+    var supportsTokenHashSignIn: Bool { false }
+
     /// Supabase's one-time-token exchange. The Mobile API signs MitID in
     /// through `completeMitIDSignIn` instead, and has no token-hash concept.
     func verifyEmailToken(hash: String) async throws {
@@ -275,7 +300,7 @@ nonisolated final class APIAuthService: AuthService {
     private func adopt(_ session: SessionDTO) {
         tokens.save(accessToken: session.accessToken, refreshToken: session.refreshToken)
         listeners.broadcast(
-            AuthSession(userID: session.customer.id, email: session.customer.email)
+            AuthSession(userID: session.customer.id, email: session.customer.email ?? "")
         )
     }
 

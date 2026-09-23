@@ -60,34 +60,47 @@ struct SmartShopApp: App {
 
     /// Deep links the app answers:
     ///
+    /// Each arrives either on our custom scheme or, once the Universal Link is
+    /// live, as an `https://` link on one of our own domains. `AppLinks` treats
+    /// the two identically; only the last path component and the query matter.
+    ///
     ///   - `smartshop://mitid?status=…&reference=…&state=…` — a MitID return
     ///   - `smartshop://auth-callback#access_token=…&type=recovery` — password
-    ///     recovery and email confirmation
+    ///     recovery and email confirmation, Supabase's shape
+    ///   - `smartshop://reset-password?token=…` — password recovery, the Mobile
+    ///     API's shape. Which host the backend actually sends is item 9 in
+    ///     `docs/mobile-api-backend-requests.md`; the token is matched wherever
+    ///     it arrives, so any host on our scheme works.
     ///
     /// The web has to defend against these landing on the wrong route (see
     /// `src/lib/recovery.ts`); on iOS there is exactly one entry point, so the
     /// handling is a single function.
     private func handle(_ url: URL) {
-        guard url.scheme == SupabaseConfig.redirectURL.scheme else { return }
+        guard AppLinks.isOurs(url) else { return }
 
-        // A MitID return. The deep link arrives at the app rather than at a
-        // screen, so it is routed to the coordinator regardless of what is on
-        // screen — the browser trip may well have outlived the view that
-        // started it.
-        if let callback = MitIDCallback(url: url) {
+        switch AppLinks.route(for: url) {
+        case .mitID:
+            // Routed to the coordinator rather than to a screen, because the
+            // trip may well have outlived the view that started it. The web
+            // session usually intercepts this itself; this is the path taken
+            // when the MitID *app* handled the return instead. Redeeming is
+            // idempotent, so a duplicate is harmless.
+            guard let callback = MitIDCallback(url: url) else { return }
             Task { await mitIDSignIn.handle(callback) }
-            return
-        }
 
-        let fragment = URLComponents(string: "?" + (url.fragment() ?? ""))
-        let query = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        let items = (fragment?.queryItems ?? []) + (query?.queryItems ?? [])
+        case .passwordReset(let token):
+            // The Mobile API's reset carries a one-time token and creates no
+            // session, so there is nothing for the Supabase SDK to do with it.
+            session.beginPasswordRecovery(token: token)
 
-        if items.first(where: { $0.name == "type" })?.value == "recovery" {
+        case .supabaseRecovery:
             session.beginPasswordRecovery()
-        }
+            Task { try? await SupabaseClient.shared.auth.session(from: url) }
 
-        // Let the SDK turn the callback into a session either way.
-        Task { try? await SupabaseClient.shared.auth.session(from: url) }
+        case .none:
+            // An email-confirmation callback or similar. Let the SDK make what
+            // it can of it while Supabase is still in the tree.
+            Task { try? await SupabaseClient.shared.auth.session(from: url) }
+        }
     }
 }

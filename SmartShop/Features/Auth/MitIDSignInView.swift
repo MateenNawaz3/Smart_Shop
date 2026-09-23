@@ -17,9 +17,12 @@ import SwiftUI
 /// app may well have been terminated and relaunched in between.
 struct MitIDSignInView: View {
     @Environment(\.strings) private var t
-    @Environment(\.openURL) private var openURL
     @Environment(MitIDSignInCoordinator.self) private var coordinator
     @Environment(DeviceState.self) private var device
+    @Environment(AuthSessionStore.self) private var session
+
+    /// A brand new MitID account has contact details and a PIN still to set.
+    @State private var goToContactDetails = false
 
     var body: some View {
         AppScreen(ovals: BrandOvals(variant: .spread, tone: .light)) {
@@ -44,12 +47,30 @@ struct MitIDSignInView: View {
         }
         .animation(.easeOut(duration: 0.25), value: coordinator.phase)
         .toolbar(.hidden, for: .navigationBar)
-        // The coordinator produces the URL; opening it is the view's job, since
-        // only a view has an `openURL` to open it with.
-        .onChange(of: coordinator.authorizationURL) { _, url in
-            guard let url else { return }
-            openURL(url)
-            coordinator.authorizationURLWasOpened()
+        .navigationDestination(isPresented: $goToContactDetails) { ContactDetailsView() }
+        .onChange(of: coordinator.phase) { _, phase in
+            switch phase {
+            case .signedIn(let didRegister):
+                // Ask whenever we are actually missing something, not only on
+                // the first sign-in ever. `registered` is true exactly once per
+                // identity, so branching on it alone meant a customer who
+                // abandoned this screen could never be asked again — and MitID
+                // gives us neither an email nor a phone number, so there is
+                // always something missing until someone types it.
+                //
+                // `registered` now only chooses the wording.
+                if didRegister || coordinator.profile.needsContactDetails {
+                    goToContactDetails = true
+                } else {
+                    session.finishEnrollment()
+                }
+            case .idle, .failed:
+                // Cancelled or failed: nothing was created, so let the app
+                // resolve its own phase again rather than stranding it.
+                session.finishEnrollment()
+            case .starting, .awaitingCallback, .completing:
+                break
+            }
         }
         .onDisappear {
             // Leaving the screen abandons the attempt, so a late deep link
@@ -69,7 +90,13 @@ struct MitIDSignInView: View {
                 .multilineTextAlignment(.center)
 
             Button(isStarting ? t("mitid.signIn.starting") : t("mitid.signIn.start")) {
-                Task { await coordinator.start() }
+                Task {
+                    // Held until the flow finishes, or the session landing
+                    // mid-trip would swap the whole app to the tab shell and
+                    // tear this screen down underneath the customer.
+                    session.beginEnrollment()
+                    await coordinator.start()
+                }
             }
             .buttonStyle(.brandPrimary)
             .disabled(isStarting)
@@ -113,7 +140,13 @@ struct MitIDSignInView: View {
 
             if coordinator.phase == .awaitingCallback {
                 Button(t("mitid.signIn.tryAgain")) {
-                    Task { await coordinator.start() }
+                    Task {
+                    // Held until the flow finishes, or the session landing
+                    // mid-trip would swap the whole app to the tab shell and
+                    // tear this screen down underneath the customer.
+                    session.beginEnrollment()
+                    await coordinator.start()
+                }
                 }
                 .buttonStyle(.brandOutline)
             }

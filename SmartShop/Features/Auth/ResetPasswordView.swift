@@ -24,6 +24,8 @@ struct ResetPasswordView: View {
     @State private var formError: String?
     @State private var isSaving = false
     @State private var didSave = false
+    /// nil until the link has been checked; false means expired or already used.
+    @State private var linkIsValid: Bool?
 
     var body: some View {
         AppScreen(ovals: BrandOvals(variant: .spread, tone: .light)) {
@@ -33,6 +35,8 @@ struct ResetPasswordView: View {
 
                     if didSave {
                         done
+                    } else if linkIsValid == false {
+                        expired
                     } else {
                         form
                     }
@@ -40,6 +44,37 @@ struct ResetPasswordView: View {
                 .padding(.vertical, Theme.Spacing.lg)
             }
             .scrollDismissesKeyboard(.interactively)
+        }
+        .task { await checkLink() }
+    }
+
+    /// Asks the backend whether the link is still good before showing the form,
+    /// so an expired link says so instead of taking a password and then
+    /// refusing it. Only the Mobile API can answer this; Supabase's link has
+    /// already become a session by the time this screen appears, and its
+    /// `isResetTokenValid` refuses, which is read as "nothing to check".
+    private func checkLink() async {
+        guard let token = session.recoveryToken, linkIsValid == nil else { return }
+        linkIsValid = (try? await environment.authService.isResetTokenValid(token)) ?? true
+    }
+
+    private var expired: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            Text(t("reset.errExpired")).font(Theme.display(.title))
+                .multilineTextAlignment(.center)
+            Text(t("reset.expiredNote"))
+                .font(Theme.body(.subheadline))
+                .foregroundStyle(.white.opacity(0.8))
+                .multilineTextAlignment(.center)
+
+            Button(t("reset.backToLogin")) {
+                Task {
+                    await session.signOut()
+                    session.endPasswordRecovery()
+                }
+            }
+            .buttonStyle(.brandPrimary)
+            .padding(.top, Theme.Spacing.md)
         }
     }
 
@@ -116,10 +151,25 @@ struct ResetPasswordView: View {
         isSaving = true
         defer { isSaving = false }
         do {
-            try await environment.authService.updatePassword(password)
+            // Two shapes of the same flow. The Mobile API sets the password
+            // straight from the emailed token; Supabase has already exchanged
+            // that token for a recovery session, so there is nothing to carry.
+            if let token = session.recoveryToken {
+                try await environment.authService.resetPassword(
+                    token: token, newPassword: password
+                )
+            } else {
+                try await environment.authService.updatePassword(password)
+            }
             didSave = true
         } catch {
-            formError = t("reset.errGeneric")
+            // A token works once and expires in an hour, so the likeliest
+            // failure at this point is that the link is spent.
+            if session.recoveryToken != nil, error is APIError {
+                linkIsValid = false
+            } else {
+                formError = t("reset.errGeneric")
+            }
         }
     }
 }

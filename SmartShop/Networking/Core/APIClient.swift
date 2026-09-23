@@ -100,6 +100,7 @@ nonisolated struct LiveAPIClient: APIClient {
         }
 
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        APIBodyDump.ifWanted(path: request.path, status: status, body: data)
         let envelope: APIEnvelope<Response>
         do {
             envelope = try JSONDecoder.api.decode(APIEnvelope<Response>.self, from: data)

@@ -358,3 +358,82 @@ struct SignUpPasswordTests {
         #expect(tokens.accessToken == "a-1")
     }
 }
+
+// MARK: - The Supabase → Mobile API switch
+
+/// The two things the `authService` flip turns on, in the places a screen
+/// reads them rather than at the network boundary.
+@Suite("Auth backend capabilities")
+struct AuthBackendCapabilityTests {
+
+    /// The sign-up wizard and MitID verification both hinge on this, and both
+    /// show a "paused" notice rather than a form when it is false.
+    @Test func onlyTheMobileAPILacksTokenHashSignIn() {
+        #expect(SupabaseAuthService().supportsTokenHashSignIn)
+        #expect(DemoAuthService(backend: .shared).supportsTokenHashSignIn)
+        #expect(APIAuthService().supportsTokenHashSignIn == false)
+    }
+}
+
+/// `/auth/password/change` answers for three different reasons and has already
+/// changed its status code for one of them once, so the mapping is asserted on
+/// the refusal rather than on the code.
+@Suite("Change-password failures")
+@MainActor
+struct ChangePasswordFailureTests {
+    private func key(_ error: any Error) -> String {
+        DetailsModel.passwordFailure(error)
+    }
+
+    @Test func wrongCurrentPasswordAs401() {
+        #expect(key(APIError.unauthorized(message: "Unauthorized"))
+            == "more.details.errors.currentPasswordWrong")
+    }
+
+    /// The same refusal after the backend moved it to a 400 mid-migration.
+    @Test func wrongCurrentPasswordAs400() {
+        #expect(key(APIError.failure(
+            code: "VALIDATION_ERROR",
+            message: "Current password is incorrect",
+            status: 400
+        )) == "more.details.errors.currentPasswordWrong")
+    }
+
+    @Test func rejectedNewPassword() {
+        #expect(key(APIError.failure(
+            code: "VALIDATION_ERROR",
+            message: "This password has been found in a breach (pwned)",
+            status: 400
+        )) == "more.details.errors.passwordWeak")
+    }
+
+    @Test func anythingElseIsGeneric() {
+        #expect(key(APIError.unexpectedStatus(500))
+            == "more.details.errors.passwordUpdateFailed")
+    }
+}
+
+/// `AppEnvironment` wiring, asserted because getting it wrong is invisible:
+/// every screen compiles and runs either way, and the app just quietly behaves
+/// as though nothing had been migrated.
+@Suite("Live environment wiring")
+@MainActor
+struct LiveEnvironmentWiringTests {
+
+    /// `DemoMode.isEnabled` is true, so `AppEnvironment.live` takes its demo
+    /// branch and the other one never executes in the app. Auth has to be
+    /// flipped *there*. This caught `APIStoreService` being wired only in the
+    /// dead branch, and then caught auth the same way.
+    @Test func authIsOnTheMobileAPIInTheBranchTheAppActuallyTakes() {
+        #expect(AppEnvironment.live.authService is APIAuthService)
+    }
+
+    /// `sessionUpdates()` fans out per instance, so two `APIAuthService`s do
+    /// not see each other's sessions. `AuthSessionStore` watches `authService`;
+    /// if MitID sign-in adopted its session on a different object, it would
+    /// complete and leave the app signed out.
+    @Test func mitIDSignInSharesTheSameObjectAsAuth() {
+        let environment = AppEnvironment.live
+        #expect(environment.mitIDSignIn as AnyObject === environment.authService as AnyObject)
+    }
+}

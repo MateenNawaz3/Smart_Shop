@@ -45,6 +45,10 @@ final class SignUpModel {
     private let addresses = DanishAddressService()
     private var postalTask: Task<Void, Never>?
 
+    /// The wizard's first step ends by exchanging a token hash for a session.
+    /// A backend that cannot do that cannot run any of this.
+    var backendCanEnrol: Bool { auth.supportsTokenHashSignIn }
+
     init(idSignup: any IdSignupService, auth: any AuthService, device: DeviceState, session: AuthSessionStore) {
         self.idSignup = idSignup
         self.auth = auth
@@ -178,7 +182,8 @@ struct SignUpView: View {
                         stepIndicator
 
                         switch model.step {
-                        case 1: detailsForm
+                        case 1:
+                            if model.backendCanEnrol { detailsForm } else { unavailable }
                         case 2: IdVerificationForm { model.advance() }
                             .padding(4).background(.white.opacity(0.95), in: .rect(cornerRadius: Theme.Radius.card))
                         case 3: OtpSection(kind: .phone, tone: .dark) { model.advance() }
@@ -192,7 +197,7 @@ struct SignUpView: View {
                         default: passwordForm
                         }
 
-                        if model.step == 1 {
+                        if model.step == 1 || !model.backendCanEnrol {
                             HStack(spacing: Theme.Spacing.xs) {
                                 Text(t("signup.hasAccount")).foregroundStyle(.white.opacity(0.8))
                                 NavigationLink(t("common.login"), value: AuthRoute.login)
@@ -209,6 +214,24 @@ struct SignUpView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .navigationBarBackButtonHidden(model.step > 1)
+    }
+
+    /// Shown in place of step 1 when the backend has no way to finish the
+    /// wizard, so nobody fills in four steps to be refused at the end.
+    private var unavailable: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            Image(systemName: "clock.badge.exclamationmark")
+                .font(.system(size: 44))
+                .foregroundStyle(Theme.Colors.lime)
+            Text(t("signup.unavailable.title"))
+                .font(Theme.display(.title2, weight: .bold))
+                .multilineTextAlignment(.center)
+            Text(t("signup.unavailable.body"))
+                .font(Theme.body(.subheadline))
+                .foregroundStyle(.white.opacity(0.8))
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, Theme.Spacing.lg)
     }
 
     private var header: some View {
@@ -244,69 +267,73 @@ struct SignUpView: View {
         .accessibilityLabel(t("signup.title"))
     }
 
-    /// Step 5. Deliberately the same card as "Change password" in My details —
-    /// it is the same job, and someone who has seen one should recognise the
-    /// other.
+    /// Step 5.
+    ///
+    /// Styled like the other steps — white on green, the screen's own field
+    /// tone and primary button — not like "Change password" in My details.
+    /// That card is a `GuestCard`: lime at 10% with green text, which only
+    /// works on `AppPageLayout`'s white canvas. Dropped onto this screen's
+    /// green background it renders green on green, which is what it did.
     @ViewBuilder
     private var passwordForm: some View {
         @Bindable var model = model
-        GuestCard {
-            VStack(alignment: .leading, spacing: 20) {
+        VStack(spacing: 20) {
+            VStack(spacing: Theme.Spacing.sm) {
                 Text(t("signup.password.title"))
                     .font(Theme.display(.title2, weight: .bold))
-                    .foregroundStyle(Theme.Colors.green)
+                    .foregroundStyle(.white)
 
-                if model.passwordSaved {
-                    HStack(spacing: 12) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 28))
-                            .foregroundStyle(Theme.Colors.lime)
-                        Text(t("signup.password.saved"))
-                            .font(Theme.body(.subheadline))
-                            .foregroundStyle(Theme.Colors.green)
-                    }
-                } else {
+                if !model.passwordSaved {
                     Text(t("signup.password.subtitle"))
                         .font(Theme.body(.subheadline))
-                        .foregroundStyle(Theme.Colors.green.opacity(0.75))
+                        .foregroundStyle(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
+                }
+            }
 
-                    BrandTextField(
-                        label: t("signup.password.newPassword"),
-                        text: $model.password,
-                        error: model.errors[.password].map { t($0) },
-                        isSecure: true,
-                        contentType: .newPassword,
-                        tone: .onLight
-                    )
-                    BrandTextField(
-                        label: t("signup.password.repeatPassword"),
-                        text: $model.confirmPassword,
-                        error: model.errors[.confirm].map { t($0) },
-                        isSecure: true,
-                        contentType: .newPassword,
-                        tone: .onLight
-                    )
+            if model.passwordSaved {
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 28))
+                        .foregroundStyle(Theme.Colors.lime)
+                    Text(t("signup.password.saved"))
+                        .font(Theme.body(.subheadline))
+                        .foregroundStyle(.white)
+                }
+            } else {
+                BrandTextField(
+                    label: t("signup.password.newPassword"),
+                    text: $model.password,
+                    error: model.errors[.password].map { t($0) },
+                    isSecure: true,
+                    contentType: .newPassword
+                )
+                BrandTextField(
+                    label: t("signup.password.repeatPassword"),
+                    text: $model.confirmPassword,
+                    error: model.errors[.confirm].map { t($0) },
+                    isSecure: true,
+                    contentType: .newPassword
+                )
 
-                    Button(
-                        model.isSubmitting
-                            ? t("signup.password.saving")
-                            : t("signup.password.save")
-                    ) {
-                        Task { await model.savePassword() }
-                    }
-                    .buttonStyle(LeaveGuestButtonStyle())
-                    .disabled(model.isSubmitting)
-                    .opacity(model.isSubmitting ? 0.6 : 1)
+                Button(
+                    model.isSubmitting
+                        ? t("signup.password.saving")
+                        : t("signup.password.save")
+                ) {
+                    Task { await model.savePassword() }
+                }
+                .buttonStyle(.brandPrimary)
+                .disabled(model.isSubmitting)
+                .opacity(model.isSubmitting ? 0.6 : 1)
 
-                    if let key = model.formErrorKey {
-                        Text(t(key))
-                            .font(Theme.body(.subheadline))
-                            .foregroundStyle(Theme.Colors.red)
-                    }
+                if let key = model.formErrorKey {
+                    Text(t(key))
+                        .font(Theme.body(.subheadline))
+                        .multilineTextAlignment(.center)
                 }
             }
         }
-        .padding(.horizontal, Theme.Spacing.md)
     }
 
     @ViewBuilder

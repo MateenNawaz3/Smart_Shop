@@ -90,5 +90,8 @@ struct StubProfileService: ProfileService {
     func setFavoriteStore(_ slug: String, home: GeoPoint?) async throws {}
     func setHome(_ point: GeoPoint) async throws {}
     func setOnboardingDone() async throws {}
-    func saveContactDetails(email: String, telefon: String, adresse: String, postnr: String, by: String) async throws {}
+    func saveContactDetails(
+        fornavn: String, efternavn: String, email: String, telefon: String,
+        adresse: String, postnr: String, by: String
+    ) async throws {}
 }

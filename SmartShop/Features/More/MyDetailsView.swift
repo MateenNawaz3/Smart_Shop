@@ -76,6 +76,14 @@ struct MyDetailsView: View {
                     .font(Theme.display(.title2, weight: .bold))
                     .foregroundStyle(Theme.Colors.green)
 
+                // `/auth/password/change` requires the current password.
+                // Supabase never did — it updates on the live session — but it
+                // ignores the extra argument, so one form serves both.
+                BrandTextField(
+                    label: t("more.details.currentPassword"), text: $model.currentPassword,
+                    error: model.passwordErrors.current.map { t($0) },
+                    isSecure: true, contentType: .password, tone: .onLight
+                )
                 BrandTextField(
                     label: t("more.details.newPassword"), text: $model.password,
                     error: model.passwordErrors.password.map { t($0) },
@@ -298,7 +306,7 @@ struct AddressField: View {
 @Observable
 final class DetailsModel {
     enum Field: Hashable { case firstName, lastName, telefon, adresse, postnr, by }
-    struct PasswordErrors { var password: String?; var confirm: String? }
+    struct PasswordErrors { var current: String?; var password: String?; var confirm: String? }
 
     var profiles: (any ProfileService)?
     var auth: (any AuthService)?
@@ -310,6 +318,7 @@ final class DetailsModel {
     var savedMessage: String?
     var saveError: String?
 
+    var currentPassword = ""
     var password = ""
     var confirm = ""
     var passwordErrors = PasswordErrors()
@@ -397,25 +406,52 @@ final class DetailsModel {
         passwordError = nil
         passwordMessage = nil
         var next = PasswordErrors()
+        if currentPassword.isEmpty { next.current = "more.details.errors.enterCurrentPassword" }
         if password.isEmpty { next.password = "more.details.errors.enterNewPassword" }
         else if password.count < 8 { next.password = "more.details.errors.passwordTooShort" }
         if confirm.isEmpty { next.confirm = "more.details.errors.repeatPassword" }
         else if confirm != password { next.confirm = "more.details.errors.passwordsDontMatch" }
         passwordErrors = next
-        guard next.password == nil, next.confirm == nil, let auth else { return }
+        guard next.current == nil, next.password == nil, next.confirm == nil,
+              let auth else { return }
 
         passwordSaving = true
         do {
-            try await auth.updatePassword(password)
+            try await auth.changePassword(current: currentPassword, new: password)
+            currentPassword = ""
             password = ""
             confirm = ""
             passwordMessage = "more.details.passwordUpdated"
         } catch {
-            let text = error.localizedDescription.lowercased()
-            passwordError = text.contains("pwned") || text.contains("weak")
-                ? "more.details.errors.passwordWeak"
-                : "more.details.errors.passwordUpdateFailed"
+            passwordError = Self.passwordFailure(error)
+            if passwordError == "more.details.errors.currentPasswordWrong" {
+                passwordErrors.current = passwordError
+                passwordError = nil
+            }
         }
         passwordSaving = false
+    }
+
+    /// Which of the three things went wrong.
+    ///
+    /// The refusal is matched on the server's prose rather than its status,
+    /// because the backend has already moved this one: a wrong current password
+    /// answered `401` one morning and `400 VALIDATION_ERROR` the same
+    /// afternoon. A bare `.unauthorized` here is still about the body and not
+    /// the token — `changePassword` sends the request with the refresh retry
+    /// turned off, so a stale session would have failed earlier.
+    static func passwordFailure(_ error: any Error) -> String {
+        let apiError = error as? APIError
+        let text = (apiError?.serverMessage ?? error.localizedDescription).lowercased()
+        let wrongCurrent = "more.details.errors.currentPasswordWrong"
+
+        if text.contains("current") || text.contains("incorrect") || text.contains("nuværende") {
+            return wrongCurrent
+        }
+        if text.contains("pwned") || text.contains("weak") {
+            return "more.details.errors.passwordWeak"
+        }
+        if let apiError, case .unauthorized = apiError { return wrongCurrent }
+        return "more.details.errors.passwordUpdateFailed"
     }
 }

@@ -42,6 +42,10 @@ final class MitIDModel {
         birthDate.formatted(.iso8601.year().month().day().dateSeparator(.dash))
     }
 
+    /// This flow finishes by exchanging a token hash for a session, which
+    /// only the Supabase stack can do. See `AuthService.supportsTokenHashSignIn`.
+    var backendCanEnrol: Bool { auth.supportsTokenHashSignIn }
+
     /// The form: validate, then hand over to the simulated MitID app.
     func submit() {
         errorKey = nil
@@ -93,7 +97,8 @@ struct MitIDView: View {
     var body: some View {
         Group {
             switch model.stage {
-            case .form: form
+            case .form:
+                if model.backendCanEnrol { form } else { unavailable }
             case .app: mitIDApp
             case .verified: verified
             }
@@ -160,6 +165,31 @@ struct MitIDView: View {
                     .padding(.vertical, Theme.Spacing.xl)
                 }
                 .scrollDismissesKeyboard(.interactively)
+            }
+        }
+    }
+
+    /// Stands in for the form when the backend cannot complete the flow.
+    private var unavailable: some View {
+        AppScreen(ovals: BrandOvals(variant: .spread, tone: .light)) {
+            VStack(spacing: 0) {
+                AuthHeader()
+                    .padding(.top, Theme.Spacing.md)
+
+                VStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: "clock.badge.exclamationmark")
+                        .font(.system(size: 44))
+                        .foregroundStyle(Theme.Colors.lime)
+                    Text(t("mitid.unavailableTitle"))
+                        .font(Theme.display(.title2, weight: .bold))
+                        .multilineTextAlignment(.center)
+                    Text(t("mitid.unavailableBody"))
+                        .font(Theme.body(.subheadline))
+                        .foregroundStyle(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.horizontal, Theme.Spacing.lg)
+                .frame(maxHeight: .infinity)
             }
         }
     }

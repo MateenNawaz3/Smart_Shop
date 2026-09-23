@@ -30,6 +30,8 @@ final class AuthSessionStore {
     }
 
     private(set) var phase: Phase = .loading
+    /// The reset token from a password-recovery deep link, when there was one.
+    private(set) var recoveryToken: String?
     private(set) var session: AuthSession?
     /// True while a multi-step sign-up (MitID → contact details → PIN, or the
     /// ID wizard) is in progress. The session exists from the first step, so
@@ -93,11 +95,20 @@ final class AuthSessionStore {
         recompute()
     }
 
-    func beginPasswordRecovery() {
+    /// Enters recovery, carrying the reset token when the backend sends one.
+    ///
+    /// Supabase has no token to carry: its link turns into a live recovery
+    /// session and the new password is set on that. The Mobile API has no
+    /// recovery session at all — the token from the link *is* the credential,
+    /// and it has to reach the reset screen, which the deep link is the only
+    /// source for.
+    func beginPasswordRecovery(token: String? = nil) {
+        recoveryToken = token
         phase = .recovering
     }
 
     func endPasswordRecovery() {
+        recoveryToken = nil
         phase = .loading
         recompute()
     }

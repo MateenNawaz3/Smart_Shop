@@ -24,10 +24,15 @@ final class AppEnvironment {
     let storeService: any StoreService
     /// The backend a MitID sign-in talks to.
     ///
-    /// Separate from `authService` on purpose. MitID sign-in exists only on the
-    /// Mobile API — `SupabaseMitIDService` was always a stub — so this points
-    /// there while everything else is still on Supabase. When `authService`
-    /// moves to `APIAuthService` the two become the same thing and this can go.
+    /// The backend a MitID sign-in talks to.
+    ///
+    /// Separate from `authService` only because the UI-test builds point
+    /// `authService` at a stand-in, and MitID sign-in exists on the Mobile API
+    /// alone. Everywhere else the two must be **the same object**, not two
+    /// `APIAuthService`s: `sessionUpdates()` fans out from a per-instance list
+    /// of listeners, so a session adopted by one instance is invisible to
+    /// anything watching another. `AuthSessionStore` watches `authService`,
+    /// which is how a completed MitID sign-in used to leave the app signed out.
     let mitIDSignIn: any AuthService
 
     init(
@@ -66,8 +71,18 @@ final class AppEnvironment {
     static var live: AppEnvironment {
         if DemoMode.isEnabled && !UITesting.isSignedIn {
             let backend = DemoBackend.shared
+            let api = APIAuthService()
             return AppEnvironment(
-                authService: DemoAuthService(backend: backend),
+                // Off demo, for the same reason stores went: demo mode exists
+                // because the Supabase Edge Functions listed in `DemoMode` were
+                // never deployed, and auth is not one of them — the Mobile API
+                // registers, signs in and changes passwords for real. Leaving
+                // this on `DemoAuthService` would mean the flip below never
+                // ran in the app at all, which is exactly what happened to
+                // `APIStoreService` the first time.
+                authService: UITesting.isActive && !UITesting.usesLiveAPI
+                    ? DemoAuthService(backend: backend)
+                    : api,
                 pinService: DemoPinService(backend: backend),
                 mitIDService: DemoMitIDService(backend: backend),
                 profileService: DemoProfileService(backend: backend),
@@ -82,12 +97,19 @@ final class AppEnvironment {
                 // the demo build reads them from the Mobile API.
                 storeService: UITesting.isActive && !UITesting.usesLiveAPI
                     ? BundledStoreService()
-                    : APIStoreService()
+                    : APIStoreService(),
+                mitIDSignIn: api
             )
         }
 
+        let api = APIAuthService()
         return AppEnvironment(
-            authService: SupabaseAuthService(),
+            // Module 2. Sign-in, sign-out, both password flows and MitID
+            // sign-in now run on the Mobile API. The UI tests keep their own
+            // signed-in stubs, which need no network.
+            authService: UITesting.isSignedIn
+                ? DemoAuthService(backend: DemoBackend.shared)
+                : api,
             pinService: SupabasePinService(),
             mitIDService: SupabaseMitIDService(),
             profileService: UITesting.isSignedIn
@@ -101,7 +123,8 @@ final class AppEnvironment {
             // tests stay on the bundled list so they need no network.
             storeService: UITesting.isActive && !UITesting.usesLiveAPI
                     ? BundledStoreService()
-                    : APIStoreService()
+                    : APIStoreService(),
+            mitIDSignIn: api
         )
     }
 }

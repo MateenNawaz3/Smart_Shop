@@ -218,9 +218,14 @@ struct DemoProfileService: ProfileService {
         backend.updateAccount { $0.onboardingDone = true }
     }
 
-    func saveContactDetails(email: String, telefon: String, adresse: String, postnr: String, by: String) async throws {
+    func saveContactDetails(
+        fornavn: String, efternavn: String, email: String, telefon: String,
+        adresse: String, postnr: String, by: String
+    ) async throws {
         await DemoMode.pause(0.6)
         backend.updateAccount { account in
+            account.fornavn = fornavn
+            account.efternavn = efternavn
             account.email = email
             account.telefon = telefon
             account.adresse = adresse

@@ -101,9 +101,38 @@ nonisolated struct RefreshedTokenDTO: Decodable, Sendable {
 nonisolated struct CustomerSummaryDTO: Decodable, Sendable {
     var id: String
     var customerCode: String
-    var email: String
+    /// **Nullable, and null is the normal case after a MitID sign-in** — MitID
+    /// releases no email address, so an account it creates has none until the
+    /// customer types one. This was `String` until 2026-09-23, which meant
+    /// `/auth/mitid/complete` threw a decoding error for precisely the case it
+    /// exists to serve: a brand new MitID account.
+    var email: String?
     var phone: String?
+    /// Null for an identity under Danish *navne- og adressebeskyttelse*: MitID
+    /// releases the placeholder `NAVNE & ADRESSEBESKYTTET`, which the server
+    /// stores as null rather than printing on a receipt as if it were a person.
+    /// A real population, not an edge case — never treat a missing name as an
+    /// error.
     var firstName: String?
+    var middleName: String?
+    var lastName: String?
+    /// `yyyy-MM-dd`, from the CPR number behind MitID — **not** a free-text
+    /// field the customer typed. Added by the backend on 2026-09-23 at our
+    /// request. It is data, not an age *assertion*: `ageOver18` on
+    /// `GET /identity/status` remains the only thing that proves age.
+    var dateOfBirth: String?
+    /// `male` / `female` as the registry records it, derived from the CPR
+    /// number. Added by the backend 2026-09-23. Treated as an open set: an
+    /// unrecognised value is shown as it arrives rather than dropped, because
+    /// silently hiding a value we did not anticipate is worse than showing it.
+    var gender: String?
+    var addressLine1: String?
+    var addressLine2: String?
+    var postalCode: String?
+    var city: String?
+    /// ISO-3166-1 alpha-2. `DK` on a MitID account.
+    var country: String?
+    var registrationMethod: String?
     /// `pending_verification` immediately after registering.
     var status: String
     var emailVerified: Bool

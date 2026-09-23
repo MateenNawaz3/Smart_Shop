@@ -36,6 +36,19 @@ nonisolated protocol AuthService: Sendable {
     func verifyEmailToken(hash: String) async throws
     func signOut() async throws
 
+    /// Whether `verifyEmailToken` means anything on this backend.
+    ///
+    /// The ID sign-up wizard and MitID *verification* both finish by handing
+    /// the app a token hash minted by a Supabase Edge Function, and exchanging
+    /// it is the step that signs the new customer in. The Mobile API has no
+    /// token-hash concept and no passwordless register, so neither flow can
+    /// complete there — see item 3 in `docs/mobile-api-backend-requests.md`.
+    ///
+    /// The screens read this *before* showing their forms. Letting someone fill
+    /// in four steps and then fail on submit would be a worse way to say the
+    /// same thing.
+    var supportsTokenHashSignIn: Bool { get }
+
     // MARK: Mobile API password flow
     //
     // Supabase does password recovery in two steps — swap the emailed token for
@@ -99,6 +112,100 @@ nonisolated struct MitIDSignInOutcome: Sendable, Equatable {
     /// True when this MitID return created the account rather than signing in
     /// to one that already existed — the app shows a different next step.
     var didRegister: Bool
+    /// What MitID was willing to tell us, for pre-filling the screen that
+    /// follows. Every field is optional on purpose; see `MitIDProfile`.
+    var profile = MitIDProfile()
+}
+
+/// The little MitID gives us about a person.
+///
+/// **Every field can be absent, and two of them routinely are.** MitID releases
+/// no email address at all, so a new account has none. And a name is null for an
+/// identity under Danish name-and-address protection. A screen built on this
+/// must work when all of it is empty.
+///
+/// Date of birth, gender and address are **not** here because the Mobile API
+/// does not return them: date of birth lives on the verification record rather
+/// than the profile, and the other two are outside the current `openid ssn`
+/// scope. `ageOver18` comes from `GET /identity/status`, never from sign-in.
+nonisolated struct MitIDProfile: Sendable, Equatable {
+    var firstName: String?
+    var lastName: String?
+    var email: String?
+    var phone: String?
+    /// `yyyy-MM-dd` as the server sends it. Kept as a string rather than a
+    /// `Date` because it is a calendar date with no time and no zone — turning
+    /// it into a `Date` invents a midnight in some timezone and can shift the
+    /// day across a border.
+    var dateOfBirth: String?
+    /// The registry's value, unmapped. `MitIDProfile` deliberately does not
+    /// turn this into an enum: a closed set would throw away any value the
+    /// backend adds later, and this is not a field worth losing data on.
+    var gender: String?
+    var addressLine1: String?
+    var postalCode: String?
+    var city: String?
+
+    /// True when MitID told us nothing usable, which is the name-protected
+    /// case. The screen asks for everything rather than showing empty
+    /// "pre-filled" fields.
+    var isEmpty: Bool {
+        [firstName, lastName, email, phone, dateOfBirth]
+            .allSatisfy { $0?.isEmpty ?? true }
+    }
+
+    /// The birth date as the customer's own locale writes it, or nil.
+    var formattedDateOfBirth: String? {
+        guard let dateOfBirth,
+              let date = Self.isoDay.date(from: dateOfBirth)
+        else { return nil }
+        return date.formatted(.dateTime.day().month(.wide).year())
+    }
+
+    /// A translation key for the gender, or nil when there is nothing to show.
+    ///
+    /// Returns a key for the values we know and the raw string for anything
+    /// else — `Translator` passes an unknown key through unchanged, so a value
+    /// the backend adds tomorrow appears as itself instead of vanishing.
+    var genderLabelKey: String? {
+        guard let gender = gender?.nilWhenEmpty else { return nil }
+        return ["male", "female", "other"].contains(gender.lowercased())
+            ? "otp.contact.gender.\(gender.lowercased())"
+            : gender
+    }
+
+    /// Fixed to `en_US_POSIX` and UTC: this parses a machine format, so it must
+    /// not follow the device's calendar or timezone.
+    private static let isoDay: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    /// Whether this customer still owes us an email address or a phone number.
+    ///
+    /// **This, not `registered`, decides whether to ask.** MitID releases no
+    /// email and no phone, so an account it created has neither until someone
+    /// types them — and `registered` is only true on the very first sign-in
+    /// ever. Branching on `registered` alone gave each identity exactly one
+    /// chance to supply contact details, and anyone who abandoned that screen
+    /// was never asked again. Verified against dev on 2026-09-23: a returning
+    /// MitID account came back `registered: false` with `email` and `phone`
+    /// both still null.
+    var needsContactDetails: Bool {
+        (email?.isEmpty ?? true) || (phone?.isEmpty ?? true)
+    }
+}
+
+nonisolated extension String {
+    /// Treats an empty string as absent.
+    ///
+    /// The server distinguishes "no value" (null) from "empty string", but for
+    /// display they are the same thing, and a blank pre-filled field is worse
+    /// than an obviously empty one.
+    var nilWhenEmpty: String? { isEmpty ? nil : self }
 }
 
 /// Raised by a backend asked for something it cannot do.
@@ -110,6 +217,10 @@ nonisolated struct UnsupportedAuthOperation: LocalizedError {
 }
 
 nonisolated extension AuthService {
+    /// Supabase and the demo backend both mint token hashes; only the Mobile
+    /// API does not, so it is the one that overrides this.
+    var supportsTokenHashSignIn: Bool { true }
+
     func isResetTokenValid(_ token: String) async throws -> Bool {
         throw UnsupportedAuthOperation(operation: "checking a reset link")
     }

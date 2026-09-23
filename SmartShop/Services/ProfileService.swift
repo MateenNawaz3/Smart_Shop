@@ -58,7 +58,16 @@ protocol ProfileService: Sendable {
     func setHome(_ point: GeoPoint) async throws
     func setOnboardingDone() async throws
     /// The MitID contact step: phone and address on the profile, email on the auth user.
-    func saveContactDetails(email: String, telefon: String, adresse: String, postnr: String, by: String) async throws
+    /// Saves everything the post-sign-up screen collects.
+    ///
+    /// The names are here because a MitID account may arrive without one: the
+    /// broker releases a placeholder for an identity under Danish name-and-
+    /// address protection, which the server stores as null. That customer types
+    /// their own, so this has to be able to write it.
+    func saveContactDetails(
+        fornavn: String, efternavn: String, email: String, telefon: String,
+        adresse: String, postnr: String, by: String
+    ) async throws
 }
 
 struct SupabaseProfileService: ProfileService {
@@ -180,7 +189,10 @@ struct SupabaseProfileService: ProfileService {
         try await patch(["onboarding_gennemfoert": .bool(true)])
     }
 
-    func saveContactDetails(email: String, telefon: String, adresse: String, postnr: String, by: String) async throws {
+    func saveContactDetails(
+        fornavn: String, efternavn: String, email: String, telefon: String,
+        adresse: String, postnr: String, by: String
+    ) async throws {
         let user = try await client.auth.session.user
         // The web's server function sets the email with the admin key, confirmed.
         // From the client this asks Supabase to send a confirmation link instead.
@@ -188,6 +200,7 @@ struct SupabaseProfileService: ProfileService {
             try await client.auth.update(user: UserAttributes(email: email))
         }
         try await patch([
+            "fornavn": .string(fornavn), "efternavn": .string(efternavn),
             "telefon": .string(telefon), "adresse": .string(adresse),
             "postnr": .string(postnr), "by": .string(by),
         ])
