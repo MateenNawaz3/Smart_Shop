@@ -432,6 +432,32 @@ struct LiveEnvironmentWiringTests {
     /// not see each other's sessions. `AuthSessionStore` watches `authService`;
     /// if MitID sign-in adopted its session on a different object, it would
     /// complete and leave the app signed out.
+    /// Wired 2026-09-24. Both clients were written and live-tested on
+    /// 2026-09-22 and then left pointing at `DemoPinService` / `DemoWheelService`
+    /// for two days, which nothing caught — the app ran, the screens worked, and
+    /// the wheel handed out barcodes the till had never heard of.
+    @Test func pinAndWheelAreOnTheMobileAPI() {
+        let environment = AppEnvironment.live
+        #expect(environment.pinService is APIPinService)
+        #expect(environment.wheelService is APIWheelService)
+    }
+
+    /// Wired 2026-09-24 alongside PIN and the wheel.
+    @Test func otpAndProfileAreOnTheMobileAPI() {
+        let environment = AppEnvironment.live
+        #expect(environment.otpService is APIOtpService)
+        #expect(environment.profileService is APIProfileService)
+    }
+
+    /// Wired 2026-09-24. `appConfigService` is the one with teeth — it can
+    /// block the app — so it is worth asserting it is the real thing.
+    @Test func configContactAndContentAreOnTheMobileAPI() {
+        let environment = AppEnvironment.live
+        #expect(environment.appConfigService is APIAppConfigService)
+        #expect(environment.contactService is APIContactService)
+        #expect(environment.contentService is APIContentService)
+    }
+
     @Test func mitIDSignInSharesTheSameObjectAsAuth() {
         let environment = AppEnvironment.live
         #expect(environment.mitIDSignIn as AnyObject === environment.authService as AnyObject)

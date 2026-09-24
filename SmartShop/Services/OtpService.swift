@@ -11,14 +11,14 @@ import Supabase
 /// The web handlers hash the code, write the `telefon_otp` / `email_otp` rows
 /// with the admin client and check attempts and expiry server-side. That has to
 /// stay server-side, so the iOS client calls Edge Functions of the same names.
-protocol OtpService: Sendable {
+nonisolated protocol OtpService: Sendable {
     func sendPhoneCode(to phone: String) async throws -> OtpSent
     func verifyPhoneCode(_ code: String) async throws -> OtpVerdict
     func sendEmailCode(to email: String) async throws -> OtpSent
     func verifyEmailCode(_ code: String) async throws -> OtpVerdict
 }
 
-struct OtpSent: Decodable, Sendable {
+nonisolated struct OtpSent: Decodable, Sendable {
     /// The normalised destination the code went to.
     var destination: String
     /// Shown in the app while `DEMO_SHOW_CODE` is on server-side.
@@ -41,12 +41,12 @@ struct OtpSent: Decodable, Sendable {
     }
 }
 
-enum OtpVerdict: Sendable, Equatable {
+nonisolated enum OtpVerdict: Sendable, Equatable {
     case ok
     case wrong, expired, attempts
 }
 
-private struct OtpVerdictResponse: Decodable {
+private nonisolated struct OtpVerdictResponse: Decodable {
     var ok: Bool
     var reason: String?
     var verdict: OtpVerdict {
@@ -61,7 +61,7 @@ private struct OtpVerdictResponse: Decodable {
 
 /// Calls the `otp-send-phone`, `otp-verify-phone`, `otp-send-email` and
 /// `otp-verify-email` Edge Functions.
-struct SupabaseOtpService: OtpService {
+nonisolated struct SupabaseOtpService: OtpService {
     var client: SupabaseClient = .shared
 
     func sendPhoneCode(to phone: String) async throws -> OtpSent {

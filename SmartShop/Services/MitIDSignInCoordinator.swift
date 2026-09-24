@@ -51,7 +51,9 @@ final class MitIDSignInCoordinator {
 
     private let auth: any AuthService
     /// Presents the browser leg in-app and intercepts its own callback.
-    private let web: MitIDWebAuthenticator
+    private let web: any MitIDWebAuthenticating
+    /// The in-flight browser leg, so leaving the screen can abandon it.
+    private var webTask: Task<Void, Never>?
     /// The state issued with the authorization URL, held for the return trip.
     private var expectedState: String?
     /// When the authorization URL stops being valid. The server says 600
@@ -62,7 +64,7 @@ final class MitIDSignInCoordinator {
     /// Often nearly empty — see `MitIDProfile`.
     private(set) var profile = MitIDProfile()
 
-    init(auth: any AuthService, web: MitIDWebAuthenticator = MitIDWebAuthenticator()) {
+    init(auth: any AuthService, web: any MitIDWebAuthenticating = MitIDWebAuthenticator()) {
         self.auth = auth
         self.web = web
     }
@@ -79,15 +81,30 @@ final class MitIDSignInCoordinator {
             expectedState = session.state
             expiry = Date.now.addingTimeInterval(TimeInterval(session.expiresIn))
             phase = .awaitingCallback
+            present(session.authorizationURL)
+        } catch is UnsupportedAuthOperation {
+            phase = .failed(messageKey: "mitid.errorEdgeFunction")
+        } catch {
+            phase = .failed(messageKey: "mitid.errorGeneric")
+        }
+    }
 
-            // The browser leg runs in-app and usually hands its own callback
-            // back here. With app-switch on, the customer may instead leave for
-            // the MitID app and return as a deep link through `SmartShopApp`,
-            // so this result is one of two possible routes — not the only one.
+    /// Opens the browser leg **without waiting for it**.
+    ///
+    /// Deliberately not awaited inside `start()`. The web session is one of two
+    /// ways the answer can arrive — the other is a deep link at `SmartShopApp`
+    /// after the MitID *app* has taken over — and making `start()` block on one
+    /// of them would have made that route the exception rather than an equal.
+    /// Both now land in `handle(_:)`, which is idempotent.
+    private func present(_ url: URL) {
+        webTask?.cancel()
+        webTask = Task { [weak self] in
+            guard let self else { return }
             let result = await web.authenticate(
-                url: session.authorizationURL,
+                url: url,
                 callbackScheme: Self.callbackScheme
             )
+            guard !Task.isCancelled else { return }
 
             switch result {
             case .success(let url):
@@ -101,16 +118,15 @@ final class MitIDSignInCoordinator {
                 // Backing out of MitID is a choice, not a fault. Returning to
                 // `.idle` lets the screen offer the button again rather than
                 // showing an error for something the customer did on purpose.
-                clearAttempt()
-                phase = .idle
+                // Guarded because the deep link may already have won the race.
+                if case .awaitingCallback = phase {
+                    clearAttempt()
+                    phase = .idle
+                }
 
             case .failure:
-                fail("mitid.errorGeneric")
+                if case .awaitingCallback = phase { fail("mitid.errorGeneric") }
             }
-        } catch is UnsupportedAuthOperation {
-            phase = .failed(messageKey: "mitid.errorEdgeFunction")
-        } catch {
-            phase = .failed(messageKey: "mitid.errorGeneric")
         }
     }
 
@@ -155,6 +171,7 @@ final class MitIDSignInCoordinator {
             do {
                 let outcome = try await auth.completeMitIDSignIn(reference: reference)
                 clearAttempt()
+                webTask?.cancel()
                 web.cancel()
                 profile = outcome.profile
                 phase = .signedIn(didRegister: outcome.didRegister)
@@ -166,6 +183,8 @@ final class MitIDSignInCoordinator {
     }
 
     func reset() {
+        webTask?.cancel()
+        webTask = nil
         web.cancel()
         clearAttempt()
         phase = .idle

@@ -45,7 +45,9 @@ nonisolated final class APIAuthService: AuthService {
         guard tokens.accessToken != nil else { return nil }
         do {
             let me: CurrentCustomerDTO = try await client.send(.get("/mobile/me"))
-            return AuthSession(userID: me.id, email: me.email)
+            // Empty, not absent: a MitID account has no email until the
+            // customer supplies one, and `AuthSession.email` is display-only.
+            return AuthSession(userID: me.id, email: me.email ?? "")
         } catch {
             return nil
         }

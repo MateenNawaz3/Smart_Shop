@@ -22,6 +22,14 @@ final class AppEnvironment {
     let verificationService: any VerificationService
     let wheelService: any WheelService
     let storeService: any StoreService
+    /// The launch gate: build blocking, maintenance and feature flags.
+    let appConfigService: any AppConfigService
+    /// The contact form and the marketing unsubscribe.
+    let contactService: any ContactService
+    /// Server-managed copy for the info pages.
+    let contentService: any ContentService
+    /// Till receipts.
+    let purchaseService: any PurchaseService
     /// The backend a MitID sign-in talks to.
     ///
     /// The backend a MitID sign-in talks to.
@@ -44,8 +52,15 @@ final class AppEnvironment {
         idSignupService: any IdSignupService = UnavailableIdSignupService(),
         otpService: any OtpService = SupabaseOtpService(),
         verificationService: any VerificationService = SupabaseVerificationService(),
-        wheelService: any WheelService = SupabaseWheelService(),
+        // No default. Both call sites choose explicitly, because a default
+        // here is invisible at the call site — which is exactly how the live
+        // branch kept `SupabaseWheelService` after the demo branch had moved.
+        wheelService: any WheelService,
         storeService: any StoreService = BundledStoreService(),
+        appConfigService: any AppConfigService = APIAppConfigService(),
+        contactService: any ContactService = APIContactService(),
+        contentService: any ContentService = APIContentService(),
+        purchaseService: any PurchaseService = APIPurchaseService(),
         mitIDSignIn: (any AuthService)? = nil
     ) {
         self.authService = authService
@@ -58,6 +73,10 @@ final class AppEnvironment {
         self.verificationService = verificationService
         self.wheelService = wheelService
         self.storeService = storeService
+        self.appConfigService = appConfigService
+        self.contactService = contactService
+        self.contentService = contentService
+        self.purchaseService = purchaseService
         self.mitIDSignIn = mitIDSignIn ?? APIAuthService()
     }
 
@@ -83,14 +102,34 @@ final class AppEnvironment {
                 authService: UITesting.isActive && !UITesting.usesLiveAPI
                     ? DemoAuthService(backend: backend)
                     : api,
-                pinService: DemoPinService(backend: backend),
+                // Off demo for the same reason auth and stores went: the PIN
+                // endpoints are real and the Edge Functions `DemoMode` waits on
+                // are not among them. `APIPinService` registers the handset on
+                // the first `setPin`, so a fresh install needs no extra step.
+                pinService: UITesting.isActive && !UITesting.usesLiveAPI
+                    ? DemoPinService(backend: backend)
+                    : APIPinService(),
                 mitIDService: DemoMitIDService(backend: backend),
-                profileService: DemoProfileService(backend: backend),
+                // Module 8's first slice. My details stops showing demo
+                // data behind a real session.
+                profileService: UITesting.isActive && !UITesting.usesLiveAPI
+                    ? DemoProfileService(backend: backend)
+                    : APIProfileService(),
                 offerService: BundledOfferService(),
                 idSignupService: DemoIdSignupService(backend: backend),
-                otpService: DemoOtpService(backend: backend),
+                // Both OTP routes need a token, so the account must exist
+                // before a code can be sent — which is why the sign-up wizard
+                // has to register first rather than verify its way in.
+                otpService: UITesting.isActive && !UITesting.usesLiveAPI
+                    ? DemoOtpService(backend: backend)
+                    : APIOtpService(),
                 verificationService: DemoVerificationService(backend: backend),
-                wheelService: DemoWheelService(backend: backend),
+                // The wheel mints a real gift card server-side, so the demo
+                // service's locally generated barcode is a code the till has
+                // never heard of. That is the reason this one had to move.
+                wheelService: UITesting.isActive && !UITesting.usesLiveAPI
+                    ? DemoWheelService(backend: backend)
+                    : APIWheelService(),
                 // Demo mode exists because account creation needs Edge
                 // Functions that are not deployed. Stores have no such
                 // constraint — they are public and need no session — so even
@@ -110,15 +149,20 @@ final class AppEnvironment {
             authService: UITesting.isSignedIn
                 ? DemoAuthService(backend: DemoBackend.shared)
                 : api,
-            pinService: SupabasePinService(),
+            pinService: UITesting.isSignedIn
+                ? DemoPinService(backend: DemoBackend.shared)
+                : APIPinService(),
             mitIDService: SupabaseMitIDService(),
             profileService: UITesting.isSignedIn
                 ? StubProfileService()
-                : SupabaseProfileService(),
+                : APIProfileService(),
             offerService: BundledOfferService(),
             idSignupService: SupabaseIdSignupService(),
-            otpService: UITesting.isSignedIn ? DemoOtpService() : SupabaseOtpService(),
+            otpService: UITesting.isSignedIn ? DemoOtpService() : APIOtpService(),
             verificationService: UITesting.isSignedIn ? StubVerificationService() : SupabaseVerificationService(),
+            wheelService: UITesting.isSignedIn
+                ? DemoWheelService(backend: DemoBackend.shared)
+                : APIWheelService(),
             // Module 4 is the first slice to run against the Mobile API. UI
             // tests stay on the bundled list so they need no network.
             storeService: UITesting.isActive && !UITesting.usesLiveAPI

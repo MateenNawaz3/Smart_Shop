@@ -28,7 +28,11 @@ nonisolated struct CurrentCustomerDTO: Decodable, Sendable {
     var lastName: String?
     /// Server-composed display name.
     var name: String?
-    var email: String
+    /// **Nullable.** A MitID account has no email until the customer gives us
+    /// one — MitID releases no address. Same trap as `CustomerSummaryDTO`,
+    /// where a non-optional `String` made `/auth/mitid/complete` throw a
+    /// decoding error for exactly the accounts it exists to create.
+    var email: String?
     var emailVerified: Bool
     var phone: String?
     var phoneVerified: Bool
@@ -43,7 +47,19 @@ nonisolated struct CurrentCustomerDTO: Decodable, Sendable {
     var identityVerified: Bool
     var marketingOptIn: Bool
     var onboardingCompleted: Bool
-    var registeredAt: Date
+    var registeredAt: Date?
+    var dateOfBirth: String?
+    var gender: String?
+    var middleName: String?
+}
+
+/// The name half of `PATCH /mobile/me`.
+///
+/// Separate from the address so a screen that edits one cannot silently blank
+/// the other: every field here is omitted when nil.
+nonisolated struct ProfileNamePatchDTO: Encodable, Sendable {
+    var firstName: String?
+    var lastName: String?
 }
 
 /// The address half of `PATCH /mobile/me`.
@@ -51,6 +67,21 @@ nonisolated struct CurrentCustomerDTO: Decodable, Sendable {
 /// Every field is optional and omitted when nil, because a PATCH that sends
 /// `null` would clear a field the caller never meant to touch.
 nonisolated struct ProfileAddressPatchDTO: Encodable, Sendable {
+    var addressLine1: String?
+    var postalCode: String?
+    var city: String?
+}
+
+/// `PATCH /mobile/me`.
+///
+/// Note what it does **not** accept: `email`, `phone` and `marketingOptIn`.
+/// The first two are the sign-in identity and change only by proving the new
+/// one through OTP; marketing is a consent record written through
+/// `/me/consents`. Every field is omitted when nil, because a PATCH that sends
+/// `null` clears a field the caller never meant to touch.
+nonisolated struct UpdateProfileRequestDTO: Encodable, Sendable {
+    var firstName: String?
+    var lastName: String?
     var addressLine1: String?
     var postalCode: String?
     var city: String?

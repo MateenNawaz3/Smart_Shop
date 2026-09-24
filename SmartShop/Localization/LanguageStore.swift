@@ -72,6 +72,19 @@ final class LanguageStore {
     /// The `.lproj` bundle the chosen language's strings are read from.
     private(set) var bundle: Bundle
 
+    /// Server-owned strings for the chosen language, which **override** the
+    /// compiled bundle key for key.
+    ///
+    /// This is what lets copy be corrected without shipping a build: the bundle
+    /// is the floor, not the source of truth. It is deliberately additive —
+    /// a key the server does not send falls through to the bundle, and a failed
+    /// load leaves the app exactly as it was rather than blank.
+    private(set) var overrides: [String: String] = [:]
+
+    /// Set once at launch. Nil in previews and in UI tests, where the bundle is
+    /// the whole story and no network should happen.
+    var translations: (any TranslationService)?
+
     init() {
         let stored = UserDefaults.standard.string(forKey: Self.key)
             .flatMap(AppLanguage.init(rawValue:))
@@ -85,7 +98,31 @@ final class LanguageStore {
     func select(_ language: AppLanguage) {
         guard language != self.language else { return }
         UserDefaults.standard.set(language.rawValue, forKey: Self.key)
+        // Drop the old language's overrides immediately. Keeping them until the
+        // new ones arrive would show Danish strings on a German screen for as
+        // long as the request takes.
+        overrides = [:]
         self.language = language
+        Task { await refreshOverrides() }
+    }
+
+    /// Pulls the server's strings for the current language.
+    ///
+    /// Silent by design. Every failure mode — offline, 404 for a language the
+    /// server has no bundle for, a malformed body — leaves `overrides` as it is
+    /// and the app keeps working on its compiled strings. There is nothing
+    /// useful to tell the customer about a copy update that did not arrive.
+    func refreshOverrides() async {
+        guard let translations else { return }
+        let requested = language
+        guard let bundle = try? await translations.bundle(for: requested) else { return }
+
+        // `/translations/de` once answered with Danish and a 200. Taking the
+        // server at its word would have put Danish door messages in front of a
+        // German speaker with nothing to show it had happened.
+        guard !bundle.isFallback(from: requested) else { return }
+        guard requested == language else { return }   // language changed mid-flight
+        overrides = bundle.strings
     }
 
     /// Look up a key in the chosen language.
@@ -124,10 +161,18 @@ extension EnvironmentValues {
 /// language changes, because the environment value itself changed.
 struct Translator: Equatable {
     let bundle: Bundle
+    /// Server-owned strings, consulted before the bundle. See
+    /// `LanguageStore.overrides`.
+    var overrides: [String: String] = [:]
 
     /// `t("tourist.title")`
+    ///
+    /// Server first, bundle second. The bundle is the floor: a key the server
+    /// has never heard of still resolves, so an override set can be partial —
+    /// which it always is, since the server owns only the strings whose
+    /// *decisions* it owns.
     func callAsFunction(_ key: String) -> String {
-        bundle.localizedString(forKey: key, value: key, table: nil)
+        overrides[key] ?? bundle.localizedString(forKey: key, value: key, table: nil)
     }
 
     /// Reads an array of records stored as `prefix.<index>.<field>` — how the

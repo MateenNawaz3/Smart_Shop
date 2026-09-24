@@ -24,7 +24,9 @@ struct AboutView: View {
             GuestBackLink(title: t("common.backToMore"), action: onBack)
         } content: {
             VStack(spacing: Theme.Spacing.md) {
-                InfoCard { paragraph(t("about.intro")) }
+                // Server-managed, with the built-in wording as the floor so
+                // the page is complete before any network call returns.
+                RemotePageCard(key: PageKey.about) { paragraph(t("about.intro")) }
 
                 InfoCard(title: t("about.missionTitle")) {
                     VStack(alignment: .leading, spacing: 12) {

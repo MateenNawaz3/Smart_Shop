@@ -44,6 +44,54 @@ private final class FakeMitIDAuth: AuthService, @unchecked Sendable {
     func signOut() async throws {}
 }
 
+/// A browser leg that never answers.
+///
+/// These tests exercise the **deep-link** delivery route, where the MitID app
+/// took over and the return arrives at `SmartShopApp` rather than through the
+/// web session. Suspending forever models exactly that: the sheet is still open
+/// when the answer comes from somewhere else. It also keeps the real
+/// `ASWebAuthenticationSession` out of a unit test, where there is no window to
+/// present over.
+@MainActor
+private final class SilentWeb: MitIDWebAuthenticating {
+    /// What the coordinator asked us to open, so a test can assert the
+    /// authorization URL actually reached the browser leg.
+    private(set) var presentedURL: URL?
+
+    func authenticate(
+        url: URL,
+        callbackScheme: String
+    ) async -> Result<URL, MitIDWebAuthenticationError> {
+        presentedURL = url
+        return await withCheckedContinuation { _ in }
+    }
+
+    func cancel() {}
+
+    /// The browser leg is launched in a detached task, so it has not
+    /// necessarily run by the time `start()` returns. Yields until it has.
+    func waitForPresentation() async -> URL? {
+        for _ in 0..<10 {
+            if let presentedURL { return presentedURL }
+            await Task.yield()
+        }
+        return presentedURL
+    }
+}
+
+@MainActor
+private func makeCoordinator(_ auth: FakeMitIDAuth) -> MitIDSignInCoordinator {
+    MitIDSignInCoordinator(auth: auth, web: SilentWeb())
+}
+
+@MainActor
+private func makeCoordinator(
+    _ auth: FakeMitIDAuth,
+    web: SilentWeb
+) -> MitIDSignInCoordinator {
+    MitIDSignInCoordinator(auth: auth, web: web)
+}
+
 private func callback(_ string: String) -> MitIDCallback {
     MitIDCallback(url: URL(string: string)!)!
 }
@@ -51,21 +99,26 @@ private func callback(_ string: String) -> MitIDCallback {
 @MainActor
 @Suite("MitID sign-in coordinator")
 struct MitIDCoordinatorTests {
-    @Test("starting produces a URL to open and waits for the callback")
+    @Test("starting opens the authorization URL and waits for the callback")
     func start() async {
         let auth = FakeMitIDAuth()
-        let coordinator = MitIDSignInCoordinator(auth: auth)
+        let web = SilentWeb()
+        let coordinator = makeCoordinator(auth, web: web)
 
         await coordinator.start()
         #expect(coordinator.phase == .awaitingCallback)
-        #expect(coordinator.authorizationURL?.host() == "broker.test")
+
+        // The browser leg is launched, not awaited — `start()` returning while
+        // the sheet is still open is the whole point, because the answer may
+        // instead arrive as a deep link after the MitID app takes over.
+        #expect(await web.waitForPresentation()?.host() == "broker.test")
     }
 
     @Test("a backend with no MitID says so rather than failing generically")
     func unsupported() async {
         let auth = FakeMitIDAuth()
         auth.startError = UnsupportedAuthOperation(operation: "MitID sign-in")
-        let coordinator = MitIDSignInCoordinator(auth: auth)
+        let coordinator = makeCoordinator(auth)
 
         await coordinator.start()
         #expect(coordinator.phase == .failed(messageKey: "mitid.errorEdgeFunction"))
@@ -74,7 +127,7 @@ struct MitIDCoordinatorTests {
     @Test("a successful return redeems the reference and signs in")
     func success() async {
         let auth = FakeMitIDAuth()
-        let coordinator = MitIDSignInCoordinator(auth: auth)
+        let coordinator = makeCoordinator(auth)
         await coordinator.start()
 
         await coordinator.handle(
@@ -93,7 +146,7 @@ struct MitIDCoordinatorTests {
             session: AuthSession(userID: "c-1", email: "m@example.dk"),
             didRegister: true
         )
-        let coordinator = MitIDSignInCoordinator(auth: auth)
+        let coordinator = makeCoordinator(auth)
         await coordinator.start()
 
         await coordinator.handle(
@@ -109,7 +162,7 @@ struct MitIDCoordinatorTests {
     @Test("a callback from another attempt is refused and never redeemed")
     func rejectsForeignState() async {
         let auth = FakeMitIDAuth()
-        let coordinator = MitIDSignInCoordinator(auth: auth)
+        let coordinator = makeCoordinator(auth)
         await coordinator.start()
 
         await coordinator.handle(
@@ -125,7 +178,7 @@ struct MitIDCoordinatorTests {
     @Test("a callback with no attempt in progress is ignored")
     func ignoresUnsolicited() async {
         let auth = FakeMitIDAuth()
-        let coordinator = MitIDSignInCoordinator(auth: auth)
+        let coordinator = makeCoordinator(auth)
 
         let handled = await coordinator.handle(
             callback("smartshop://mitid?status=success&reference=abc123def456ghi7&state=whatever")
@@ -140,7 +193,7 @@ struct MitIDCoordinatorTests {
     @Test("the same callback cannot be replayed")
     func noReplay() async {
         let auth = FakeMitIDAuth()
-        let coordinator = MitIDSignInCoordinator(auth: auth)
+        let coordinator = makeCoordinator(auth)
         await coordinator.start()
 
         let link = callback("smartshop://mitid?status=success&reference=abc123def456ghi7&state=state-1")
@@ -153,7 +206,7 @@ struct MitIDCoordinatorTests {
     @Test("a cancelled sign-in reports that, not a generic error")
     func cancelled() async {
         let auth = FakeMitIDAuth()
-        let coordinator = MitIDSignInCoordinator(auth: auth)
+        let coordinator = makeCoordinator(auth)
         await coordinator.start()
 
         await coordinator.handle(
@@ -168,7 +221,7 @@ struct MitIDCoordinatorTests {
     @Test("an expired session reports an expired link")
     func expiredReason() async {
         let auth = FakeMitIDAuth()
-        let coordinator = MitIDSignInCoordinator(auth: auth)
+        let coordinator = makeCoordinator(auth)
         await coordinator.start()
 
         await coordinator.handle(
@@ -182,7 +235,7 @@ struct MitIDCoordinatorTests {
     @Test("an unknown reason falls back to the generic message")
     func unknownReason() async {
         let auth = FakeMitIDAuth()
-        let coordinator = MitIDSignInCoordinator(auth: auth)
+        let coordinator = makeCoordinator(auth)
         await coordinator.start()
 
         await coordinator.handle(
@@ -201,7 +254,7 @@ struct MitIDCoordinatorTests {
             state: "state-1",
             expiresIn: 0
         )
-        let coordinator = MitIDSignInCoordinator(auth: auth)
+        let coordinator = makeCoordinator(auth)
         await coordinator.start()
 
         await coordinator.handle(
@@ -217,7 +270,7 @@ struct MitIDCoordinatorTests {
         auth.completeError = APIError.failure(
             code: "VALIDATION_ERROR", message: "expired or already used", status: 400
         )
-        let coordinator = MitIDSignInCoordinator(auth: auth)
+        let coordinator = makeCoordinator(auth)
         await coordinator.start()
 
         await coordinator.handle(
@@ -235,7 +288,7 @@ struct MitIDCoordinatorTests {
     @Test("resetting abandons the attempt")
     func reset() async {
         let auth = FakeMitIDAuth()
-        let coordinator = MitIDSignInCoordinator(auth: auth)
+        let coordinator = makeCoordinator(auth)
         await coordinator.start()
         coordinator.reset()
 

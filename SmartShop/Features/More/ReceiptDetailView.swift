@@ -12,21 +12,71 @@ struct ReceiptDetailView: View {
     let id: String
 
     @Environment(\.strings) private var t
+    @Environment(AppEnvironment.self) private var environment
+    @Environment(LanguageStore.self) private var languages
+
+    @State private var receipt: Receipt?
+    @State private var loaded = false
 
     var body: some View {
         AppPageLayout(title: t("receipts.receipt")) {
             GuestBackLink(title: t("receipts.back")) { path.removeLast() }
         } content: {
-            if let receipt = Receipt.named(id) {
+            if let receipt {
                 ReceiptPaper(receipt: receipt)
                     .frame(maxWidth: 400)
                     .frame(maxWidth: .infinity)
+            } else if !loaded {
+                ProgressView()
+                    .tint(Theme.Colors.green)
+                    .frame(maxWidth: .infinity)
             } else {
-                Text(t("receipts.empty"))
+                Text(t("receipts.loadFailed"))
                     .font(Theme.body(.subheadline))
                     .foregroundStyle(Theme.Colors.green.opacity(0.7))
             }
         }
+        .task {
+            guard !loaded else { return }
+            // Lines exist only on the detail call, which is why the list could
+            // not simply pass the receipt it already had.
+            if let detail = try? await environment.purchaseService.purchase(id: id) {
+                receipt = Receipt(detail, locale: languages.language.locale)
+            }
+            loaded = true
+        }
+    }
+}
+
+private extension Receipt {
+    /// Maps the API's receipt onto the paper-slip model `ReceiptPaper` draws.
+    ///
+    /// `barcode` carries the till's own `reference`, which is what a shop
+    /// assistant can actually look up — the bundled data used a made-up code.
+    ///
+    /// **Amounts are copied, never divided.** Receipt fields are kroner; only a
+    /// `…Minor` field would need converting, and none here is.
+    init(_ detail: PurchaseDetail, locale: Locale) {
+        self.init(
+            id: detail.id,
+            store: detail.storeName,
+            address: detail.storeAddress,
+            date: detail.occurredAt.formatted(
+                Date.FormatStyle(date: .abbreviated).locale(locale)
+            ),
+            time: detail.occurredAt.formatted(
+                Date.FormatStyle(time: .shortened).locale(locale)
+            ),
+            payment: detail.paymentMethod,
+            barcode: detail.reference,
+            lines: detail.lines.map {
+                Receipt.Line(
+                    group: "",
+                    name: $0.quantity > 1 ? "\(Int($0.quantity))× \($0.name)" : $0.name,
+                    price: $0.lineGross
+                )
+            }
+        )
     }
 }
 

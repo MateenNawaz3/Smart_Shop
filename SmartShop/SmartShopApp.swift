@@ -42,7 +42,7 @@ struct SmartShopApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            LaunchGateView { RootView() }
                 // Injected once; every screen reads them with @Environment.
                 .environment(environment)
                 .environment(device)
@@ -53,8 +53,22 @@ struct SmartShopApp: App {
                 .environment(profileCache)
                 // Re-published as a value so changing language re-renders
                 // every view that reads a string.
-                .environment(\.strings, Translator(bundle: languages.bundle))
+                .environment(
+                    \.strings,
+                    Translator(bundle: languages.bundle, overrides: languages.overrides)
+                )
                 .onOpenURL { url in handle(url) }
+                .task {
+                    // Server-owned copy, layered over the compiled bundle so a
+                    // wording change does not need a new build. Failure is
+                    // silent: the bundle is a complete set on its own.
+                    //
+                    // UI tests stay on the bundle alone — a string changing
+                    // server-side would otherwise change what a test sees.
+                    guard !UITesting.isActive || UITesting.usesLiveAPI else { return }
+                    languages.translations = APITranslationService()
+                    await languages.refreshOverrides()
+                }
         }
     }
 

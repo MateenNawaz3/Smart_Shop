@@ -10,39 +10,65 @@ struct ReceiptsView: View {
     @Binding var path: [MoreRoute]
 
     @Environment(\.strings) private var t
+    @Environment(AppEnvironment.self) private var environment
     @Environment(LanguageStore.self) private var languages
+
+    @State private var purchases: [Purchase] = []
+    @State private var loaded = false
+    @State private var failed = false
 
     var body: some View {
         AppPageLayout(title: t("receipts.title"), description: t("receipts.intro")) {
             GuestBackLink(title: t("common.backToMore")) { path.removeAll() }
         } content: {
-            DemoNote(badge: t("receipts.demoBadge"), text: t("receipts.demoNote"))
-
-            if Receipt.all.isEmpty {
+            if !loaded {
+                ProgressView()
+                    .tint(Theme.Colors.green)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, Theme.Spacing.lg)
+            } else if failed {
+                // A load that failed is not an empty shop history, and saying
+                // "no receipts" would be a lie that invites nobody to retry.
+                Text(t("receipts.loadFailed"))
+                    .font(Theme.body(.subheadline))
+                    .foregroundStyle(Theme.Colors.green.opacity(0.7))
+            } else if purchases.isEmpty {
                 Text(t("receipts.empty"))
                     .font(Theme.body(.subheadline))
                     .foregroundStyle(Theme.Colors.green.opacity(0.7))
             } else {
                 VStack(spacing: 12) {
-                    ForEach(Receipt.all) { receipt in
+                    ForEach(purchases) { purchase in
                         InfoRow(
-                            systemImage: "doc.text",
-                            title: receipt.store,
-                            subtitle: subtitle(for: receipt),
+                            systemImage: purchase.isRefund ? "arrow.uturn.left" : "doc.text",
+                            title: purchase.storeName,
+                            subtitle: subtitle(for: purchase),
                             showsChevron: true
-                        ) { path.append(.receipt(id: receipt.id)) }
+                        ) { path.append(.receipt(id: purchase.id)) }
                     }
                 }
                 .padding(.top, Theme.Spacing.md)
             }
         }
+        .task {
+            guard !loaded else { return }
+            do {
+                purchases = try await environment.purchaseService.purchases()
+            } catch {
+                failed = true
+            }
+            loaded = true
+        }
     }
 
-    private func subtitle(for receipt: Receipt) -> String {
-        let date = receipt.purchasedAt?.formatted(
+    /// **Kroner, not øre** — every amount on a receipt is already the major
+    /// unit, so it is formatted rather than divided. See `PurchaseSummaryDTO`.
+    private func subtitle(for purchase: Purchase) -> String {
+        let date = purchase.occurredAt.formatted(
             Date.FormatStyle(date: .abbreviated).locale(languages.language.locale)
-        ) ?? receipt.date
-        return "\(date) · \(receipt.lines.count) \(t("receipts.items"))\n\(t("receipts.total")) \(Receipt.kr(receipt.total))"
+        )
+        let items = "\(purchase.itemCount) \(t("receipts.items"))"
+        return "\(date) · \(items)\n\(t("receipts.total")) \(Receipt.kr(purchase.total))"
     }
 }
 

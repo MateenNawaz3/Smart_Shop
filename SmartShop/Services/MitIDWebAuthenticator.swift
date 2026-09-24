@@ -6,6 +6,17 @@
 import AuthenticationServices
 import UIKit
 
+/// The browser leg, behind a protocol so the coordinator can be tested without
+/// trying to present a sheet over a window that does not exist.
+@MainActor
+protocol MitIDWebAuthenticating: AnyObject {
+    func authenticate(
+        url: URL,
+        callbackScheme: String
+    ) async -> Result<URL, MitIDWebAuthenticationError>
+    func cancel()
+}
+
 /// Runs the MitID browser leg *inside* the app.
 ///
 /// This replaced `openURL`, which handed the customer to Safari and left them
@@ -24,7 +35,7 @@ import UIKit
 /// is therefore idempotent — whichever arrives first wins and the second is a
 /// no-op, because redeeming clears the attempt.
 @MainActor
-final class MitIDWebAuthenticator: NSObject {
+final class MitIDWebAuthenticator: NSObject, MitIDWebAuthenticating {
     private var session: ASWebAuthenticationSession?
 
     /// Presents `url` and resolves with the callback, or `nil` if the customer
