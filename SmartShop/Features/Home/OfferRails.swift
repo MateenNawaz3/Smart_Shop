@@ -31,9 +31,7 @@ struct WeekendOffersRail: View {
                 LazyHStack(spacing: 0) {
                     ForEach(Array(offers.enumerated()), id: \.element.id) { offset, offer in
                         Button { onSelect(offset) } label: {
-                            Image(offer.image)
-                                .resizable()
-                                .scaledToFill()
+                            ArtworkImage(offer.artwork, label: offer.alt(t), contentMode: .fill)
                                 .frame(height: 200)
                                 // Width must be pinned to the page *before*
                                 // clipping: `scaledToFill` leaves the image far
@@ -43,7 +41,7 @@ struct WeekendOffersRail: View {
                                 .clipped()
                         }
                         .buttonStyle(PressScaleButtonStyle())
-                        .accessibilityLabel(t(offer.altKey))
+                        .accessibilityLabel(offer.alt(t))
                         .id(offset)
                     }
                 }
@@ -87,9 +85,7 @@ struct WeeklyOffersRail: View {
             HStack(spacing: Theme.Spacing.md) {
                 ForEach(Array(offers.enumerated()), id: \.element.id) { offset, offer in
                     Button { onSelect(offset) } label: {
-                        Image(offer.image)
-                            .resizable()
-                            .scaledToFit()
+                        ArtworkImage(offer.artwork, label: offer.alt(t))
                             .padding(Theme.Spacing.sm)
                             .frame(width: 190, height: 190)
                             .background(.white, in: .rect(cornerRadius: Theme.Radius.field))

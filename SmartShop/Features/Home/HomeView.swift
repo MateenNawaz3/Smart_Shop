@@ -27,8 +27,8 @@ final class HomeModel {
     }
 
     func load() async {
-        // Offers are local, so they resolve immediately; the name needs a round
-        // trip. Running them concurrently means the rails are never gated on it.
+        // Three independent round trips. Running them concurrently means the
+        // rails are never gated on the name, nor one rail on the other.
         async let weekend = offers.weekendOffers()
         async let weekly = offers.weeklyOffers()
         async let name = profiles.firstName()
@@ -44,6 +44,7 @@ struct HomeView: View {
 
     @Environment(AppEnvironment.self) private var environment
     @Environment(\.strings) private var t
+    @Environment(\.openURL) private var openURL
 
     @State private var model: HomeModel?
 
@@ -76,8 +77,13 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                     ShopGuideCard()
 
-                    WeekendOffersRail(offers: model.weekendOffers) {
-                        model.weekendLightbox = $0
+                    // A banner with a link goes there; one without enlarges.
+                    WeekendOffersRail(offers: model.weekendOffers) { index in
+                        if let link = model.weekendOffers[index].link {
+                            openURL(link)
+                        } else {
+                            model.weekendLightbox = index
+                        }
                     }
 
                     weeklyOffers(model)

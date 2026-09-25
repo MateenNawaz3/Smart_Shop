@@ -10,8 +10,8 @@ import Foundation
 /// Serving copy from the database rather than the string catalog is the point:
 /// fixing a typo becomes an edit, not an App Store release.
 ///
-/// Bulletin-board posts and promotional banners belong to module 5 and are not
-/// here yet.
+/// Bulletin-board posts are `PostService`; promotional banners and campaign
+/// offers are `OfferService`.
 nonisolated protocol ContentService: Sendable {
     /// Every page in one call, so the app can cache them at launch.
     func pages() async throws -> [Page]

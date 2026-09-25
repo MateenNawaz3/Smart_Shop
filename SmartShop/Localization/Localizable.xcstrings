@@ -5342,6 +5342,29 @@
         }
       }
     },
+    "home.offerCode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Code"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Code"
+          }
+        }
+      }
+    },
     "home.offerImageAlt" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5361,6 +5384,75 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "This week's top offer"
+          }
+        }
+      }
+    },
+    "home.offerValidTo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gælder til {date}"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gültig bis {date}"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Valid until {date}"
+          }
+        }
+      }
+    },
+    "home.offersEmpty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der er ingen tilbud lige nu. Kig forbi igen snart."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerade gibt es keine Angebote. Schau bald wieder vorbei."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There are no offers right now. Check back soon."
+          }
+        }
+      }
+    },
+    "home.offersLoadError" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tilbuddene kunne ikke hentes. Prøv igen senere."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Angebote konnten nicht geladen werden. Bitte versuche es später erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offers couldn't be loaded. Please try again later."
           }
         }
       }
@@ -5453,6 +5545,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Valid from 27/7 through 9/8 2026"
+          }
+        }
+      }
+    },
+    "home.postsLoadError" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opslagstavlen kunne ikke hentes. Prøv igen senere."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Pinnwand konnte nicht geladen werden. Bitte versuche es später erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The bulletin board couldn't be loaded. Please try again later."
           }
         }
       }

@@ -8,7 +8,7 @@ import SwiftUI
 /// One image shown in the lightbox, with its spoken description.
 struct LightboxImage: Identifiable, Hashable {
     var id: String
-    var image: ImageResource
+    var artwork: Artwork
     var label: String
 }
 
@@ -33,9 +33,7 @@ struct OfferLightbox: View {
 
                 TabView(selection: Binding(get: { current }, set: { index = $0 })) {
                     ForEach(Array(images.enumerated()), id: \.element.id) { offset, item in
-                        Image(item.image)
-                            .resizable()
-                            .scaledToFit()
+                        ArtworkImage(item.artwork, label: item.label)
                             .clipShape(.rect(cornerRadius: Theme.Radius.field))
                             .shadow(color: .black.opacity(0.4), radius: 24, y: 12)
                             .padding(.horizontal, wide ? 8 : 28)
@@ -122,6 +120,6 @@ extension View {
 extension Offer {
     /// The lightbox entry for an offer, with its description resolved.
     func lightboxImage(_ t: Translator) -> LightboxImage {
-        LightboxImage(id: id, image: image, label: t(altKey))
+        LightboxImage(id: id, artwork: artwork, label: alt(t))
     }
 }

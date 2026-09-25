@@ -9,22 +9,24 @@ import AVKit
 /// News, upcoming openings and photos. Port of `BulletinBoard.tsx`.
 ///
 /// Images open in the shared lightbox; video posts play muted and looped.
+///
+/// Posts come from `postService`. On dev none of them has a picture, so the
+/// cards are text-only there — which is a real card layout, not a fallback.
 struct BulletinBoardList: View {
     var limit: Int?
 
     @Environment(LanguageStore.self) private var languages
     @Environment(\.strings) private var t
+    @Environment(AppEnvironment.self) private var environment
 
+    @State private var posts: [Post] = []
+    @State private var failed = false
     @State private var lightbox: Int?
-
-    private var posts: [Post] {
-        limit.map(Post.latest) ?? Post.all
-    }
 
     private var images: [LightboxImage] {
         posts.compactMap { post in
-            guard post.media?.type == "image", let image = post.media?.image else { return nil }
-            return LightboxImage(id: post.id, image: image, label: post.media?.alt(languages.language) ?? "")
+            guard post.media?.type == "image", let artwork = post.media?.artwork else { return nil }
+            return LightboxImage(id: post.id, artwork: artwork, label: post.media?.alt(languages.language) ?? "")
         }
     }
 
@@ -37,20 +39,33 @@ struct BulletinBoardList: View {
                 card(for: post)
             }
         }
+        .overlay(alignment: .topLeading) {
+            if failed && posts.isEmpty {
+                Text(t("home.postsLoadError"))
+                    .font(Theme.body(.subheadline))
+                    .foregroundStyle(Theme.Colors.green.opacity(0.6))
+            }
+        }
         .lightbox(images: images, index: $lightbox)
+        .task {
+            do {
+                posts = try await environment.postService.posts(limit: limit)
+                failed = false
+            } catch {
+                failed = true
+            }
+        }
     }
 
     private func card(for post: Post) -> some View {
         let language = languages.language
 
         return VStack(alignment: .leading, spacing: 0) {
-            if post.media?.type == "image", let image = post.media?.image {
+            if post.media?.type == "image", let artwork = post.media?.artwork {
                 Button {
                     lightbox = images.firstIndex { $0.id == post.id }
                 } label: {
-                    Image(image)
-                        .resizable()
-                        .scaledToFill()
+                    ArtworkImage(artwork, label: post.media?.alt(language) ?? "", contentMode: .fill)
                         .frame(height: 176)
                         .frame(maxWidth: .infinity)
                         .clipped()
@@ -68,12 +83,14 @@ struct BulletinBoardList: View {
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 HStack(spacing: Theme.Spacing.sm) {
-                    Text(t(post.categoryKey.labelKey))
-                        .font(Theme.display(.caption, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
-                        .background(Theme.Colors.lime, in: .capsule)
+                    if let category = post.categoryKey {
+                        Text(t(category.labelKey))
+                            .font(Theme.display(.caption, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 4)
+                            .background(Theme.Colors.lime, in: .capsule)
+                    }
 
                     if let date = post.publishedOn {
                         // `.formatted` renders in the app's chosen language, not

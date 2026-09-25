@@ -36,6 +36,8 @@ final class AppEnvironment {
     let purchaseService: any PurchaseService
     /// The events calendar and tickets.
     let eventService: any EventService
+    /// The bulletin board.
+    let postService: any PostService
     /// The backend a MitID sign-in talks to.
     ///
     /// The backend a MitID sign-in talks to.
@@ -70,6 +72,7 @@ final class AppEnvironment {
         purchaseService: any PurchaseService = APIPurchaseService(),
         // No default, for the same reason as `wheelService`.
         eventService: any EventService,
+        postService: any PostService,
         mitIDSignIn: (any AuthService)? = nil
     ) {
         self.authService = authService
@@ -88,6 +91,7 @@ final class AppEnvironment {
         self.contentService = contentService
         self.purchaseService = purchaseService
         self.eventService = eventService
+        self.postService = postService
         self.mitIDSignIn = mitIDSignIn ?? APIAuthService()
     }
 
@@ -126,7 +130,11 @@ final class AppEnvironment {
                 profileService: UITesting.isActive && !UITesting.usesLiveAPI
                     ? DemoProfileService(backend: backend)
                     : APIProfileService(),
-                offerService: BundledOfferService(),
+                // Module 5. Banners and posts are public, and offers need only
+                // a session, so nothing here waits on demo mode's Edge Functions.
+                offerService: UITesting.isActive && !UITesting.usesLiveAPI
+                    ? BundledOfferService()
+                    : APIOfferService(),
                 idSignupService: DemoIdSignupService(backend: backend),
                 // Real for the same reason as OTP: the wizard now registers on
                 // the Mobile API first, so there is a token to upload with.
@@ -164,6 +172,10 @@ final class AppEnvironment {
                 eventService: UITesting.isActive && !UITesting.usesLiveAPI
                     ? DemoEventService(backend: backend)
                     : APIEventService(),
+                // Module 5, like `offerService`: posts are public.
+                postService: UITesting.isActive && !UITesting.usesLiveAPI
+                    ? BundledPostService()
+                    : APIPostService(),
                 mitIDSignIn: api
             )
         }
@@ -183,7 +195,9 @@ final class AppEnvironment {
             profileService: UITesting.isSignedIn
                 ? StubProfileService()
                 : APIProfileService(),
-            offerService: BundledOfferService(),
+            offerService: UITesting.isActive && !UITesting.usesLiveAPI
+                ? BundledOfferService()
+                : APIOfferService(),
             idSignupService: SupabaseIdSignupService(),
             identityService: UITesting.isSignedIn ? DemoIdentityService() : APIIdentityService(),
             otpService: UITesting.isSignedIn ? DemoOtpService() : APIOtpService(),
@@ -201,6 +215,9 @@ final class AppEnvironment {
             eventService: UITesting.isSignedIn
                 ? DemoEventService(backend: DemoBackend.shared)
                 : APIEventService(),
+            postService: UITesting.isActive && !UITesting.usesLiveAPI
+                ? BundledPostService()
+                : APIPostService(),
             mitIDSignIn: api
         )
     }

@@ -30,6 +30,15 @@ nonisolated struct Post: Identifiable, Codable, Hashable, Sendable {
         /// Source filename in the web project; mapped to an asset below.
         var src: String
         var alt: Localized
+        /// A remote image or video, for a post from the Mobile API. Absent
+        /// from the bundled JSON, so it decodes as nil there.
+        var url: URL? = nil
+
+        /// What to draw: the remote file when there is one, else the bundled.
+        @MainActor var artwork: Artwork? {
+            if let url { return .remote(url) }
+            return image.map(Artwork.bundled)
+        }
 
         @MainActor var image: ImageResource? {
             switch src {
@@ -41,8 +50,10 @@ nonisolated struct Post: Identifiable, Codable, Hashable, Sendable {
             }
         }
 
-        /// Bundled video file for `type == "video"` posts, if the app ships it.
+        /// The remote file, or the bundled one for `type == "video"` posts if
+        /// the app ships it.
         var videoURL: URL? {
+            if let url { return url }
             let name = (src as NSString).deletingPathExtension
             let ext = (src as NSString).pathExtension
             return Bundle.main.url(forResource: name, withExtension: ext.isEmpty ? "mp4" : ext)
@@ -53,6 +64,13 @@ nonisolated struct Post: Identifiable, Codable, Hashable, Sendable {
         case openingSoon = "opening-soon"
         case news
         case fromOpening = "from-opening"
+
+        /// The API spells these with underscores (`opening_soon`), and its set
+        /// is open. An unknown one is nil: the card simply has no pill.
+        init?(apiValue: String?) {
+            guard let apiValue else { return nil }
+            self.init(rawValue: apiValue.replacingOccurrences(of: "_", with: "-"))
+        }
 
         /// Key into the string catalog for the pill label.
         var labelKey: String {
@@ -67,7 +85,8 @@ nonisolated struct Post: Identifiable, Codable, Hashable, Sendable {
     var id: String
     /// ISO date, used for sorting.
     var date: String
-    var categoryKey: Category
+    /// Nil for a category this build does not know.
+    var categoryKey: Category?
     var title: Localized
     var body: Localized
     var media: Media?
@@ -77,7 +96,7 @@ nonisolated struct Post: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
-extension Post {
+nonisolated extension Post {
     /// Newest first, matching `getPosts` in the web project.
     static let all: [Post] = {
         guard let url = Bundle.main.url(forResource: "posts", withExtension: "json"),
