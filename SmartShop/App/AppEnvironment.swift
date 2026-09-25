@@ -18,8 +18,9 @@ final class AppEnvironment {
     let profileService: any ProfileService
     let offerService: any OfferService
     let idSignupService: any IdSignupService
-    /// Identity documents for review. Separate from `verificationService`,
-    /// which is still the Supabase schema's key fob, NFC log and tickets.
+    /// Identity documents, status, face enrolment and MitID verification.
+    /// `verificationService` is the older, wider protocol the screens use; on
+    /// the Mobile API it is a facade over this and the access endpoints.
     let identityService: any IdentityService
     let otpService: any OtpService
     let verificationService: any VerificationService
@@ -133,7 +134,12 @@ final class AppEnvironment {
                 otpService: UITesting.isActive && !UITesting.usesLiveAPI
                     ? DemoOtpService(backend: backend)
                     : APIOtpService(),
-                verificationService: DemoVerificationService(backend: backend),
+                // Module 9. Status, document review, key fob, door taps and
+                // door history are the Mobile API's; only tickets stay on the
+                // demo backend until events move.
+                verificationService: UITesting.isActive && !UITesting.usesLiveAPI
+                    ? DemoVerificationService(backend: backend)
+                    : APIVerificationService(tickets: DemoVerificationService(backend: backend)),
                 // The wheel mints a real gift card server-side, so the demo
                 // service's locally generated barcode is a code the till has
                 // never heard of. That is the reason this one had to move.
@@ -170,7 +176,9 @@ final class AppEnvironment {
             idSignupService: SupabaseIdSignupService(),
             identityService: UITesting.isSignedIn ? DemoIdentityService() : APIIdentityService(),
             otpService: UITesting.isSignedIn ? DemoOtpService() : APIOtpService(),
-            verificationService: UITesting.isSignedIn ? StubVerificationService() : SupabaseVerificationService(),
+            verificationService: UITesting.isSignedIn
+                ? StubVerificationService()
+                : APIVerificationService(tickets: SupabaseVerificationService()),
             wheelService: UITesting.isSignedIn
                 ? DemoWheelService(backend: DemoBackend.shared)
                 : APIWheelService(),

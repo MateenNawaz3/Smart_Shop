@@ -19,6 +19,8 @@ struct VerificationView: View {
     @State private var info = VerificationInfo()
     @State private var loaded = false
     @State private var showsMitID = false
+    @State private var verifyingMitID = false
+    @State private var mitIDError: String?
 
     var body: some View {
         AppPageLayout(title: t("verify.verify.title"), description: t("verify.verify.intro")) {
@@ -70,11 +72,32 @@ struct VerificationView: View {
                     Text(t("verify.verify.mitidSub")).font(Theme.body(.subheadline)).foregroundStyle(.white.opacity(0.75))
                 }
             }
-            Button(t("verify.verify.mitidCta")) { showsMitID = true }
+            Button(t("verify.verify.mitidCta")) { startMitID() }
                 .buttonStyle(WidePillButtonStyle(background: Theme.Colors.lime))
+                .disabled(verifyingMitID)
+            if let mitIDError {
+                Text(t(mitIDError)).font(Theme.body(.subheadline)).foregroundStyle(.white.opacity(0.85))
+            }
         }
         .padding(20)
         .background(Theme.Colors.green, in: .rect(cornerRadius: Theme.Radius.card))
+    }
+
+    /// The real MitID round trip where the backend has one; the simulated
+    /// form otherwise (UI tests and the Supabase build).
+    private func startMitID() {
+        guard environment.identityService.supportsMitIDVerification else {
+            showsMitID = true
+            return
+        }
+        mitIDError = nil
+        verifyingMitID = true
+        Task {
+            let outcome = await MitIDVerifier(identity: environment.identityService).verify()
+            verifyingMitID = false
+            if case .failed(let key) = outcome { mitIDError = key }
+            await reload()
+        }
     }
 
     private func reload() async {
