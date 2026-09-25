@@ -86,8 +86,8 @@ struct AuthFlowView: View {
                         LoginView(auth: environment.authService, device: device)
                     case .signUp:
                         SignUpView(
-                            idSignup: environment.idSignupService,
                             auth: environment.authService,
+                            identity: environment.identityService,
                             device: device,
                             session: session
                         )

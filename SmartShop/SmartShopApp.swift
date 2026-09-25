@@ -8,12 +8,15 @@
 import SwiftUI
 import Supabase
 import UIKit
+#if DEBUG
+import netfox
+#endif
 
 @main
 struct SmartShopApp: App {
     /// `@State` at the App level owns these for the process lifetime.
-    @State private var environment = AppEnvironment.live
-    @State private var device = DeviceState()
+    @State private var environment: AppEnvironment
+    @State private var device: DeviceState
     @State private var session: AuthSessionStore
     @State private var languages = LanguageStore()
     @State private var catalog: StoreCatalog
@@ -21,6 +24,12 @@ struct SmartShopApp: App {
     @State private var profileCache = ProfileCache()
 
     init() {
+        #if DEBUG
+        // Network inspector: shake the device to see every request. Started
+        // first so the sessions built below, Supabase's included, are hooked.
+        NFX.sharedInstance().start()
+        #endif
+
         // Must run before any store reads UserDefaults or the Keychain.
         UITesting.resetPersistedState()
         if UITesting.animationsDisabled {

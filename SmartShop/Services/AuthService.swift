@@ -380,6 +380,10 @@ nonisolated enum AuthErrorText {
     }
 
     static func signUp(_ error: any Error) -> String {
+        // The Mobile API answers a duplicate email with 409 CONFLICT.
+        if case APIError.failure(let code, _, let status) = error, status == 409 || code == "CONFLICT" {
+            return "signup.errors.emailTaken"
+        }
         let text = message(error)
         if text.contains("already registered") || text.contains("already been registered") {
             return "signup.errors.emailTaken"

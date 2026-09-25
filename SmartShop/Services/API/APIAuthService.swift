@@ -84,38 +84,21 @@ nonisolated final class APIAuthService: AuthService {
                 firstName: profile.fornavn,
                 lastName: profile.efternavn,
                 phone: profile.telefon,
-                acceptsTerms: profile.acceptsTerms
+                addressLine1: profile.adresse.nilWhenEmpty,
+                postalCode: profile.postnr.nilWhenEmpty,
+                city: profile.by.nilWhenEmpty,
+                acceptsTerms: profile.acceptsTerms,
+                marketingOptIn: profile.markedsforing
             ),
             auth: .forbidden
         )
         let session: SessionDTO = try await client.send(request)
         adopt(session)
 
-        // `/auth/register` takes no address — the account is created first and
-        // the address is a profile edit on the session it just returned. A
-        // failure here must not undo a successful registration, so it is
-        // attempted and not insisted upon; the profile screen can fix it later.
-        if !profile.adresse.isEmpty || !profile.postnr.isEmpty || !profile.by.isEmpty {
-            try? await updateAddress(from: profile)
-        }
-
         // The account exists and is usable immediately, at
         // `status: pending_verification`. There is no "check your email before
         // you may sign in" gate to report.
         return .signedIn
-    }
-
-    private func updateAddress(from profile: SignUpProfile) async throws {
-        let request = try APIRequest.json(
-            .patch,
-            "/mobile/me",
-            body: ProfileAddressPatchDTO(
-                addressLine1: profile.adresse.isEmpty ? nil : profile.adresse,
-                postalCode: profile.postnr.isEmpty ? nil : profile.postnr,
-                city: profile.by.isEmpty ? nil : profile.by
-            )
-        )
-        let _: EmptyResponse = try await client.send(request)
     }
 
     func signOut() async throws {

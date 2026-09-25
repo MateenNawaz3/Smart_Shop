@@ -99,7 +99,7 @@ struct PrizeWheel: View {
     }
 }
 
-private struct Wedge: Shape {
+private nonisolated struct Wedge: Shape {
     var start: Angle
     var end: Angle
     func path(in rect: CGRect) -> Path {
@@ -112,7 +112,7 @@ private struct Wedge: Shape {
     }
 }
 
-private struct Triangle: Shape {
+private nonisolated struct Triangle: Shape {
     func path(in rect: CGRect) -> Path {
         var p = Path()
         p.move(to: CGPoint(x: rect.minX, y: rect.minY))

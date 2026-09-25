@@ -46,6 +46,10 @@ struct VerificationStatusBadge: View {
 /// Port of `IdVerificationForm.tsx`. Licence and ID card need both sides.
 struct IdVerificationForm: View {
     var onDone: () -> Void = {}
+    /// Sends the photos somewhere other than `verificationService`. The sign-up
+    /// wizard uses it for the Mobile API, where a person reviews the document
+    /// later, so the demo's "approved automatically" note would be untrue.
+    var submitForReview: ((VerificationMethod, Data, Data?) async throws -> Void)?
 
     @Environment(\.strings) private var t
     @Environment(AppEnvironment.self) private var environment
@@ -112,7 +116,9 @@ struct IdVerificationForm: View {
                 Text(error).font(Theme.body(.subheadline)).foregroundStyle(Theme.Colors.red)
             }
 
-            DemoNote(badge: t("verify.verify.demoBadge"), text: t("verify.verify.demoNote"))
+            if submitForReview == nil {
+                DemoNote(badge: t("verify.verify.demoBadge"), text: t("verify.verify.demoNote"))
+            }
         }
         .padding(20)
         .background(Theme.Colors.lime.opacity(0.1), in: .rect(cornerRadius: Theme.Radius.card))
@@ -185,7 +191,11 @@ struct IdVerificationForm: View {
         do {
             let frontData = front.jpegData(compressionQuality: 0.85) ?? Data()
             let backData = back?.jpegData(compressionQuality: 0.85)
-            _ = try await environment.verificationService.submit(method: method, front: frontData, back: needsBack ? backData : nil)
+            if let submitForReview {
+                try await submitForReview(method, frontData, needsBack ? backData : nil)
+            } else {
+                _ = try await environment.verificationService.submit(method: method, front: frontData, back: needsBack ? backData : nil)
+            }
             done = true
             onDone()
         } catch {

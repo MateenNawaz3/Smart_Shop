@@ -14,6 +14,9 @@ nonisolated struct APIRequest: Sendable {
     var path: String
     var query: [URLQueryItem] = []
     var body: Data?
+    /// Sent as `Content-Type` whenever there is a body. JSON everywhere except
+    /// the identity uploads, which are multipart — see `multipart(_:_:parts:)`.
+    var contentType = "application/json"
     var auth: AuthRequirement = .required
 
     /// Whether a 401 should be read as "the token went stale" and answered with
@@ -76,6 +79,44 @@ nonisolated struct APIRequest: Sendable {
         )
     }
 
+    /// Builds a `multipart/form-data` body from text fields and files.
+    ///
+    /// Only `/identity/document` and `/identity/face` need this. The boundary
+    /// is random per request, so no image byte sequence can collide with it.
+    static func multipart(
+        _ method: HTTPMethod,
+        _ path: String,
+        parts: [MultipartPart],
+        auth: AuthRequirement = .required
+    ) -> APIRequest {
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var body = Data()
+        func line(_ text: String) { body.append(Data("\(text)\r\n".utf8)) }
+        for part in parts {
+            line("--\(boundary)")
+            switch part {
+            case .field(let name, let value):
+                line("Content-Disposition: form-data; name=\"\(name)\"")
+                line("")
+                line(value)
+            case .file(let name, let filename, let mimeType, let data):
+                line("Content-Disposition: form-data; name=\"\(name)\"; filename=\"\(filename)\"")
+                line("Content-Type: \(mimeType)")
+                line("")
+                body.append(data)
+                line("")
+            }
+        }
+        line("--\(boundary)--")
+        return APIRequest(
+            method: method,
+            path: path,
+            body: body,
+            contentType: "multipart/form-data; boundary=\(boundary)",
+            auth: auth
+        )
+    }
+
     /// A POST with no body at all, for the several endpoints that take none
     /// (`/me/onboarding/complete`, `/notifications/read-all`, …).
     static func post(_ path: String, auth: AuthRequirement = .required) -> APIRequest {
@@ -88,6 +129,12 @@ nonisolated struct APIRequest: Sendable {
         copy.retriesOnUnauthorized = false
         return copy
     }
+}
+
+/// One field of a `multipart/form-data` body.
+nonisolated enum MultipartPart: Sendable {
+    case field(name: String, value: String)
+    case file(name: String, filename: String, mimeType: String, data: Data)
 }
 
 nonisolated extension JSONEncoder {

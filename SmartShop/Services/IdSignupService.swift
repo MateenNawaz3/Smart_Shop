@@ -31,7 +31,7 @@ struct IdSignupDetails: Encodable, Sendable {
 struct SupabaseIdSignupService: IdSignupService {
     var client: SupabaseClient = .shared
 
-    private struct Response: Decodable { let tokenHash: String
+    private nonisolated struct Response: Decodable { let tokenHash: String
         enum CodingKeys: String, CodingKey { case tokenHash = "token_hash" }
     }
 

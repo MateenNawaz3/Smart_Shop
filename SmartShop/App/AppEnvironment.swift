@@ -18,6 +18,9 @@ final class AppEnvironment {
     let profileService: any ProfileService
     let offerService: any OfferService
     let idSignupService: any IdSignupService
+    /// Identity documents for review. Separate from `verificationService`,
+    /// which is still the Supabase schema's key fob, NFC log and tickets.
+    let identityService: any IdentityService
     let otpService: any OtpService
     let verificationService: any VerificationService
     let wheelService: any WheelService
@@ -50,6 +53,7 @@ final class AppEnvironment {
         profileService: any ProfileService,
         offerService: any OfferService,
         idSignupService: any IdSignupService = UnavailableIdSignupService(),
+        identityService: any IdentityService = DemoIdentityService(),
         otpService: any OtpService = SupabaseOtpService(),
         verificationService: any VerificationService = SupabaseVerificationService(),
         // No default. Both call sites choose explicitly, because a default
@@ -69,6 +73,7 @@ final class AppEnvironment {
         self.profileService = profileService
         self.offerService = offerService
         self.idSignupService = idSignupService
+        self.identityService = identityService
         self.otpService = otpService
         self.verificationService = verificationService
         self.wheelService = wheelService
@@ -117,6 +122,11 @@ final class AppEnvironment {
                     : APIProfileService(),
                 offerService: BundledOfferService(),
                 idSignupService: DemoIdSignupService(backend: backend),
+                // Real for the same reason as OTP: the wizard now registers on
+                // the Mobile API first, so there is a token to upload with.
+                identityService: UITesting.isActive && !UITesting.usesLiveAPI
+                    ? DemoIdentityService()
+                    : APIIdentityService(),
                 // Both OTP routes need a token, so the account must exist
                 // before a code can be sent — which is why the sign-up wizard
                 // has to register first rather than verify its way in.
@@ -158,6 +168,7 @@ final class AppEnvironment {
                 : APIProfileService(),
             offerService: BundledOfferService(),
             idSignupService: SupabaseIdSignupService(),
+            identityService: UITesting.isSignedIn ? DemoIdentityService() : APIIdentityService(),
             otpService: UITesting.isSignedIn ? DemoOtpService() : APIOtpService(),
             verificationService: UITesting.isSignedIn ? StubVerificationService() : SupabaseVerificationService(),
             wheelService: UITesting.isSignedIn

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		AA0000000000000000000301 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000201 /* Supabase */; };
+		AA0000000000000000000302 /* netfox in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000202 /* netfox */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +58,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA0000000000000000000301 /* Supabase in Frameworks */,
+				AA0000000000000000000302 /* netfox in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -118,6 +120,7 @@
 			name = SmartShop;
 			packageProductDependencies = (
 				AA0000000000000000000201 /* Supabase */,
+				AA0000000000000000000202 /* netfox */,
 			);
 			productName = SmartShop;
 			productReference = 2956707930497393008ACE57 /* SmartShop.app */;
@@ -177,7 +180,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2660;
-				LastUpgradeCheck = 2660;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					2956707830497393008ACE57 = {
 						CreatedOnToolsVersion = 26.6;
@@ -205,6 +208,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				AA0000000000000000000101 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				294844BE30669137001ADB1A /* XCRemoteSwiftPackageReference "netfox" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2956707A30497393008ACE57 /* Products */;
@@ -285,6 +289,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -339,6 +344,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -349,6 +355,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -396,6 +403,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -601,6 +609,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		294844BE30669137001ADB1A /* XCRemoteSwiftPackageReference "netfox" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kasketis/netfox";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.21.0;
+			};
+		};
 		AA0000000000000000000101 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/supabase/supabase-swift";
@@ -616,6 +632,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AA0000000000000000000101 /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
+		};
+		AA0000000000000000000202 /* netfox */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 294844BE30669137001ADB1A /* XCRemoteSwiftPackageReference "netfox" */;
+			productName = netfox;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

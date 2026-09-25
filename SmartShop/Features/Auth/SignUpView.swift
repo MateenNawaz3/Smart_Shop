@@ -5,18 +5,24 @@
 
 import SwiftUI
 
-/// The five-step ID sign-up wizard. Port of `src/routes/opret-konto.tsx`,
-/// plus a password step the web does not have.
+/// The four-step sign-up wizard. Port of `src/routes/opret-konto.tsx`,
+/// reordered for the Mobile API.
 ///
-/// Step 1 collects name and address, then the ID document, a phone code and an
-/// email code. Step 5 chooses a password: the web never needed one, because
-/// sign-in there is by one-time code or MitID, but the Mobile API's
-/// `POST /auth/register` requires a password and there is no endpoint that sets
-/// one afterwards without knowing the current one.
+/// Step 1 collects name, address, email, phone and password and registers
+/// the account there and then. It has to come first: `/otp/*/send` and
+/// `/identity/document` all need a token, and `POST /auth/register` is what
+/// returns one. The web never asked for a password because it signed in by
+/// code or MitID, but `/auth/register` requires one and no endpoint sets one
+/// later without knowing the current one.
+///
+/// Steps 2–4 are the ID document, a phone code and an email code, all on the
+/// session step 1 created.
 @MainActor
 @Observable
 final class SignUpModel {
-    enum Field: Hashable { case fornavn, efternavn, adresse, postnr, by, password, confirm }
+    enum Field: Hashable { case fornavn, efternavn, adresse, postnr, by, email, phone, password, confirm }
+
+    static let stepCount = 4
 
     var step = 1
     var fornavn = ""
@@ -24,34 +30,31 @@ final class SignUpModel {
     var adresse = ""
     var postnr = ""
     var by = ""
-    var acceptedTerms = false
-    var wantsMarketing = false
+    var email = ""
+    var phone = ""
     var password = ""
     var confirmPassword = ""
-    /// Captured from the email step, because registering needs an address to
-    /// register *with* and only that step knows what was typed.
-    var verifiedEmail = ""
-    var passwordSaved = false
+    var acceptedTerms = false
+    var wantsMarketing = false
+    /// Set once step 2 has queued a document. Review is by a person and can
+    /// take hours, so the later steps say "awaiting approval", not "verified".
+    var documentPending = false
     /// Field -> error *key*; the view translates on display.
     var errors: [Field: String] = [:]
     var termsErrorKey: String?
     var formErrorKey: String?
     var isSubmitting = false
 
-    private let idSignup: any IdSignupService
     private let auth: any AuthService
+    private let identity: any IdentityService
     private let device: DeviceState
     private let session: AuthSessionStore
     private let addresses = DanishAddressService()
     private var postalTask: Task<Void, Never>?
 
-    /// The wizard's first step ends by exchanging a token hash for a session.
-    /// A backend that cannot do that cannot run any of this.
-    var backendCanEnrol: Bool { auth.supportsTokenHashSignIn }
-
-    init(idSignup: any IdSignupService, auth: any AuthService, device: DeviceState, session: AuthSessionStore) {
-        self.idSignup = idSignup
+    init(auth: any AuthService, identity: any IdentityService, device: DeviceState, session: AuthSessionStore) {
         self.auth = auth
+        self.identity = identity
         self.device = device
         self.session = session
     }
@@ -72,88 +75,97 @@ final class SignUpModel {
         }
     }
 
+    private static func trim(_ s: String) -> String {
+        s.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Spaces and dashes dropped. The server takes a bare Danish 8-digit
+    /// number and normalises it to +45 itself.
+    private var normalisedPhone: String {
+        phone.filter { !$0.isWhitespace && $0 != "-" }
+    }
+
     private func validate() -> Bool {
         var next: [Field: String] = [:]
         func e(_ name: String) -> String { "signup.errors.\(name)" }
-        let trim = { (s: String) in s.trimmingCharacters(in: .whitespacesAndNewlines) }
+        let trim = Self.trim
         if trim(fornavn).isEmpty { next[.fornavn] = e("firstName") }
         if trim(efternavn).isEmpty { next[.efternavn] = e("lastName") }
         if trim(adresse).isEmpty { next[.adresse] = e("address") }
         if trim(postnr).wholeMatch(of: /\d{4}/) == nil { next[.postnr] = e("zip") }
         if trim(by).isEmpty { next[.by] = e("city") }
+
+        let mail = trim(email)
+        if mail.isEmpty {
+            next[.email] = e("email")
+        } else if mail.wholeMatch(of: /[^@\s]+@[^@\s]+\.[^@\s]+/) == nil {
+            next[.email] = e("emailInvalid")
+        }
+
+        if normalisedPhone.isEmpty {
+            next[.phone] = e("phone")
+        } else if normalisedPhone.wholeMatch(of: /\+?\d{8,15}/) == nil {
+            next[.phone] = e("phoneInvalid")
+        }
+
+        if password.isEmpty {
+            next[.password] = e("password")
+        } else if password.count < 8 {
+            next[.password] = e("passwordShort")
+        }
+        if confirmPassword.isEmpty {
+            next[.confirm] = e("repeat")
+        } else if confirmPassword != password {
+            next[.confirm] = e("repeatMismatch")
+        }
+
         errors = next
         termsErrorKey = acceptedTerms ? nil : "signup.errors.terms"
         return next.isEmpty && acceptedTerms
     }
 
+    /// Step 1: creates the account and signs in on it.
     func submitDetails() async {
         formErrorKey = nil
         guard validate() else { return }
         isSubmitting = true
         defer { isSubmitting = false }
-        let trim = { (s: String) in s.trimmingCharacters(in: .whitespacesAndNewlines) }
+        let trim = Self.trim
+        // Holds the signed-in UI back until the wizard is finished; otherwise
+        // the session register returns would swap the root out from under it.
+        session.beginEnrollment()
         do {
-            let tokenHash = try await idSignup.start(IdSignupDetails(
-                fornavn: trim(fornavn), efternavn: trim(efternavn), adresse: trim(adresse),
-                postnr: trim(postnr), by: trim(by), markedsforing: wantsMarketing
-            ))
-            session.beginEnrollment()
-            try await auth.verifyEmailToken(hash: tokenHash)
-            device.stopGuest()
-            step = 2
-        } catch {
-            session.finishEnrollment()
-            formErrorKey = "signup.errors.generic"
-        }
-    }
-
-    func advance() {
-        if step < 5 {
-            step += 1
-        } else {
-            session.finishEnrollment()
-        }
-    }
-
-    /// Step 5. Same rules the rest of the app applies to a new password:
-    /// at least 8 characters, and typed the same way twice.
-    func savePassword() async {
-        formErrorKey = nil
-        var next: [Field: String] = [:]
-        if password.isEmpty {
-            next[.password] = "signup.errors.enterPassword"
-        } else if password.count < 8 {
-            next[.password] = "signup.errors.passwordTooShort"
-        }
-        if confirmPassword.isEmpty {
-            next[.confirm] = "signup.errors.repeatPassword"
-        } else if confirmPassword != password {
-            next[.confirm] = "signup.errors.passwordsDontMatch"
-        }
-        errors = next
-        guard next.isEmpty else { return }
-
-        isSubmitting = true
-        defer { isSubmitting = false }
-
-        let trim = { (s: String) in s.trimmingCharacters(in: .whitespacesAndNewlines) }
-        do {
-            try await auth.setSignUpPassword(
-                password,
-                email: verifiedEmail,
+            _ = try await auth.signUp(
+                email: trim(email),
+                password: password,
                 profile: SignUpProfile(
                     fornavn: trim(fornavn), efternavn: trim(efternavn),
                     adresse: trim(adresse), postnr: trim(postnr), by: trim(by),
-                    telefon: "", markedsforing: wantsMarketing,
+                    telefon: normalisedPhone, markedsforing: wantsMarketing,
                     acceptsTerms: acceptedTerms
                 )
             )
             password = ""
             confirmPassword = ""
-            passwordSaved = true
-            session.finishEnrollment()
+            device.stopGuest()
+            step = 2
         } catch {
-            formErrorKey = "signup.errors.passwordGeneric"
+            session.finishEnrollment()
+            formErrorKey = AuthErrorText.signUp(error)
+        }
+    }
+
+    /// Step 2. Throws so the form can show its own error and stay put.
+    func submitDocument(_ method: VerificationMethod, front: Data, back: Data?) async throws {
+        _ = try await identity.submitDocument(method, front: front, back: back)
+        documentPending = true
+    }
+
+    func advance() {
+        if step < Self.stepCount {
+            step += 1
+        } else {
+            session.finishEnrollment()
         }
     }
 }
@@ -162,12 +174,12 @@ struct SignUpView: View {
     @Environment(\.strings) private var t
     @State private var model: SignUpModel
 
-    init(idSignup: any IdSignupService, auth: any AuthService, device: DeviceState, session: AuthSessionStore) {
-        _model = State(initialValue: SignUpModel(idSignup: idSignup, auth: auth, device: device, session: session))
+    init(auth: any AuthService, identity: any IdentityService, device: DeviceState, session: AuthSessionStore) {
+        _model = State(initialValue: SignUpModel(auth: auth, identity: identity, device: device, session: session))
     }
 
     private var stepLabels: [String] {
-        ["details", "id", "phone", "email", "password"].map { t("signup.steps.\($0)") }
+        ["details", "id", "phone", "email"].map { t("signup.steps.\($0)") }
     }
 
     var body: some View {
@@ -181,23 +193,26 @@ struct SignUpView: View {
                         header
                         stepIndicator
 
-                        switch model.step {
-                        case 1:
-                            if model.backendCanEnrol { detailsForm } else { unavailable }
-                        case 2: IdVerificationForm { model.advance() }
-                            .padding(4).background(.white.opacity(0.95), in: .rect(cornerRadius: Theme.Radius.card))
-                        case 3: OtpSection(kind: .phone, tone: .dark) { model.advance() }
-                        case 4:
-                            OtpSection(
-                                kind: .email,
-                                tone: .dark,
-                                onVerified: { model.advance() },
-                                onVerifiedDestination: { model.verifiedEmail = $0 }
-                            )
-                        default: passwordForm
+                        if model.documentPending && model.step > 2 {
+                            documentPendingNote
                         }
 
-                        if model.step == 1 || !model.backendCanEnrol {
+                        switch model.step {
+                        case 1:
+                            detailsForm
+                        case 2:
+                            IdVerificationForm(
+                                onDone: { model.advance() },
+                                submitForReview: { try await model.submitDocument($0, front: $1, back: $2) }
+                            )
+                            .padding(4).background(.white.opacity(0.95), in: .rect(cornerRadius: Theme.Radius.card))
+                        case 3:
+                            OtpSection(kind: .phone, tone: .dark, initialDestination: model.phone) { model.advance() }
+                        default:
+                            OtpSection(kind: .email, tone: .dark, initialDestination: model.email) { model.advance() }
+                        }
+
+                        if model.step == 1 {
                             HStack(spacing: Theme.Spacing.xs) {
                                 Text(t("signup.hasAccount")).foregroundStyle(.white.opacity(0.8))
                                 NavigationLink(t("common.login"), value: AuthRoute.login)
@@ -216,22 +231,14 @@ struct SignUpView: View {
         .navigationBarBackButtonHidden(model.step > 1)
     }
 
-    /// Shown in place of step 1 when the backend has no way to finish the
-    /// wizard, so nobody fills in four steps to be refused at the end.
-    private var unavailable: some View {
-        VStack(spacing: Theme.Spacing.md) {
-            Image(systemName: "clock.badge.exclamationmark")
-                .font(.system(size: 44))
-                .foregroundStyle(Theme.Colors.lime)
-            Text(t("signup.unavailable.title"))
-                .font(Theme.display(.title2, weight: .bold))
-                .multilineTextAlignment(.center)
-            Text(t("signup.unavailable.body"))
-                .font(Theme.body(.subheadline))
-                .foregroundStyle(.white.opacity(0.8))
-                .multilineTextAlignment(.center)
-        }
-        .padding(.horizontal, Theme.Spacing.lg)
+    /// The document is queued for a person to look at, so the tick on step 2
+    /// means "sent", not "verified".
+    private var documentPendingNote: some View {
+        Label(t("verify.verify.statusPending"), systemImage: "clock")
+            .font(Theme.body(.subheadline, weight: .semibold))
+            .foregroundStyle(.white.opacity(0.9))
+            .padding(.horizontal, 14).padding(.vertical, 8)
+            .background(.white.opacity(0.12), in: .capsule)
     }
 
     private var header: some View {
@@ -246,7 +253,7 @@ struct SignUpView: View {
     /// Numbered circles: lime tick when passed, white when active, dim otherwise.
     private var stepIndicator: some View {
         HStack(spacing: 8) {
-            ForEach(1...5, id: \.self) { n in
+            ForEach(1...SignUpModel.stepCount, id: \.self) { n in
                 let passed = model.step > n
                 let active = model.step == n
                 Group {
@@ -265,75 +272,6 @@ struct SignUpView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(t("signup.title"))
-    }
-
-    /// Step 5.
-    ///
-    /// Styled like the other steps — white on green, the screen's own field
-    /// tone and primary button — not like "Change password" in My details.
-    /// That card is a `GuestCard`: lime at 10% with green text, which only
-    /// works on `AppPageLayout`'s white canvas. Dropped onto this screen's
-    /// green background it renders green on green, which is what it did.
-    @ViewBuilder
-    private var passwordForm: some View {
-        @Bindable var model = model
-        VStack(spacing: 20) {
-            VStack(spacing: Theme.Spacing.sm) {
-                Text(t("signup.password.title"))
-                    .font(Theme.display(.title2, weight: .bold))
-                    .foregroundStyle(.white)
-
-                if !model.passwordSaved {
-                    Text(t("signup.password.subtitle"))
-                        .font(Theme.body(.subheadline))
-                        .foregroundStyle(.white.opacity(0.8))
-                        .multilineTextAlignment(.center)
-                }
-            }
-
-            if model.passwordSaved {
-                HStack(spacing: 12) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundStyle(Theme.Colors.lime)
-                    Text(t("signup.password.saved"))
-                        .font(Theme.body(.subheadline))
-                        .foregroundStyle(.white)
-                }
-            } else {
-                BrandTextField(
-                    label: t("signup.password.newPassword"),
-                    text: $model.password,
-                    error: model.errors[.password].map { t($0) },
-                    isSecure: true,
-                    contentType: .newPassword
-                )
-                BrandTextField(
-                    label: t("signup.password.repeatPassword"),
-                    text: $model.confirmPassword,
-                    error: model.errors[.confirm].map { t($0) },
-                    isSecure: true,
-                    contentType: .newPassword
-                )
-
-                Button(
-                    model.isSubmitting
-                        ? t("signup.password.saving")
-                        : t("signup.password.save")
-                ) {
-                    Task { await model.savePassword() }
-                }
-                .buttonStyle(.brandPrimary)
-                .disabled(model.isSubmitting)
-                .opacity(model.isSubmitting ? 0.6 : 1)
-
-                if let key = model.formErrorKey {
-                    Text(t(key))
-                        .font(Theme.body(.subheadline))
-                        .multilineTextAlignment(.center)
-                }
-            }
-        }
     }
 
     @ViewBuilder
@@ -366,6 +304,19 @@ struct SignUpView: View {
                                contentType: .addressCity, autocapitalization: .words)
             }
             .onChange(of: model.postnr) { _, new in model.postalCodeChanged(new) }
+
+            BrandTextField(label: t("signup.fields.email"), placeholder: t("signup.placeholders.email"),
+                           text: $model.email, error: model.errors[.email].map { t($0) },
+                           contentType: .emailAddress, keyboard: .emailAddress, autocapitalization: .never)
+            BrandTextField(label: t("signup.fields.phone"), placeholder: t("signup.placeholders.phone"),
+                           text: $model.phone, error: model.errors[.phone].map { t($0) },
+                           contentType: .telephoneNumber, keyboard: .phonePad)
+            BrandTextField(label: t("signup.fields.password"), text: $model.password,
+                           error: model.errors[.password].map { t($0) },
+                           isSecure: true, contentType: .newPassword)
+            BrandTextField(label: t("signup.fields.repeat"), text: $model.confirmPassword,
+                           error: model.errors[.confirm].map { t($0) },
+                           isSecure: true, contentType: .newPassword)
 
             VStack(alignment: .leading, spacing: 12) {
                 Toggle(isOn: Binding(get: { model.acceptedTerms }, set: { model.acceptedTerms = $0; if $0 { model.termsErrorKey = nil } })) {

@@ -25,7 +25,7 @@ protocol MitIDService: Sendable {
     func demoLogin(name: String, birthDate: String) async throws -> MitIDLogin
 }
 
-struct MitIDLogin: Decodable, Sendable {
+nonisolated struct MitIDLogin: Decodable, Sendable {
     let email: String
     let tokenHash: String
     let isNew: Bool

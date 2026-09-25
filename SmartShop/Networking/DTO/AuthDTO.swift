@@ -24,9 +24,14 @@ nonisolated struct RegisterRequestDTO: Encodable, Sendable {
     var firstName: String
     var lastName: String
     var phone: String
+    var addressLine1: String?
+    var postalCode: String?
+    var city: String?
     /// Required, and refused when false: the server records the consent rather
     /// than trusting the client to have asked.
     var acceptsTerms: Bool
+    /// Recorded as its own withdrawable consent.
+    var marketingOptIn: Bool
 }
 
 nonisolated struct LoginRequestDTO: Encodable, Sendable {

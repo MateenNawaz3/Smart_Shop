@@ -390,7 +390,7 @@ private struct SceneShelf: View {
     }
 }
 
-private struct BasketShape: Shape {
+private nonisolated struct BasketShape: Shape {
     func path(in r: CGRect) -> Path {
         var p = Path()
         p.move(to: CGPoint(x: r.minX, y: r.minY))

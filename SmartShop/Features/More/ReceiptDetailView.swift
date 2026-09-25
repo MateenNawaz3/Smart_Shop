@@ -184,7 +184,7 @@ struct ReceiptPaper: View {
 /// bites out of a 10px strip, subtle enough to read as paper rather than as a
 /// saw blade. Shallow round bumps are the closest equivalent here; sharp
 /// triangles read as a zigzag and are much louder than the design.
-private struct ScallopedEdge: Shape {
+private nonisolated struct ScallopedEdge: Shape {
     /// `true` for the strip above the receipt, `false` for the one below.
     var isTop: Bool
 

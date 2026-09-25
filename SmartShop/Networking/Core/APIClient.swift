@@ -155,7 +155,7 @@ nonisolated struct LiveAPIClient: APIClient {
 
         if let body = request.body {
             urlRequest.httpBody = body
-            urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            urlRequest.setValue(request.contentType, forHTTPHeaderField: "Content-Type")
         }
 
         // `.forbidden` means no header at all, not an empty one — guest mode
