@@ -96,7 +96,7 @@ nonisolated struct AccessListDTO<Element: Decodable & Sendable>: Decodable, Send
             return
         }
         let c = try decoder.container(keyedBy: AnyCodingKey.self)
-        items = c.first([Element].self, "items", "credentials", "events", "history") ?? []
+        items = c.first([Element].self, "items", "credentials", "events", "history", "tickets") ?? []
     }
 }
 

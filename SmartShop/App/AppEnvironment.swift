@@ -34,6 +34,8 @@ final class AppEnvironment {
     let contentService: any ContentService
     /// Till receipts.
     let purchaseService: any PurchaseService
+    /// The events calendar and tickets.
+    let eventService: any EventService
     /// The backend a MitID sign-in talks to.
     ///
     /// The backend a MitID sign-in talks to.
@@ -66,6 +68,8 @@ final class AppEnvironment {
         contactService: any ContactService = APIContactService(),
         contentService: any ContentService = APIContentService(),
         purchaseService: any PurchaseService = APIPurchaseService(),
+        // No default, for the same reason as `wheelService`.
+        eventService: any EventService,
         mitIDSignIn: (any AuthService)? = nil
     ) {
         self.authService = authService
@@ -83,6 +87,7 @@ final class AppEnvironment {
         self.contactService = contactService
         self.contentService = contentService
         self.purchaseService = purchaseService
+        self.eventService = eventService
         self.mitIDSignIn = mitIDSignIn ?? APIAuthService()
     }
 
@@ -135,8 +140,8 @@ final class AppEnvironment {
                     ? DemoOtpService(backend: backend)
                     : APIOtpService(),
                 // Module 9. Status, document review, key fob, door taps and
-                // door history are the Mobile API's; only tickets stay on the
-                // demo backend until events move.
+                // door history are the Mobile API's. Its ticket methods are
+                // unused now that the calendar reads `eventService`.
                 verificationService: UITesting.isActive && !UITesting.usesLiveAPI
                     ? DemoVerificationService(backend: backend)
                     : APIVerificationService(tickets: DemoVerificationService(backend: backend)),
@@ -153,6 +158,12 @@ final class AppEnvironment {
                 storeService: UITesting.isActive && !UITesting.usesLiveAPI
                     ? BundledStoreService()
                     : APIStoreService(),
+                // Module 10. Events are public and tickets need only a
+                // session, so nothing ties them to the undeployed Edge
+                // Functions demo mode waits on.
+                eventService: UITesting.isActive && !UITesting.usesLiveAPI
+                    ? DemoEventService(backend: backend)
+                    : APIEventService(),
                 mitIDSignIn: api
             )
         }
@@ -187,6 +198,9 @@ final class AppEnvironment {
             storeService: UITesting.isActive && !UITesting.usesLiveAPI
                     ? BundledStoreService()
                     : APIStoreService(),
+            eventService: UITesting.isSignedIn
+                ? DemoEventService(backend: DemoBackend.shared)
+                : APIEventService(),
             mitIDSignIn: api
         )
     }

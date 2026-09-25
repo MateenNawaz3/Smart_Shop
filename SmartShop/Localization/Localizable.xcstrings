@@ -2973,6 +2973,29 @@
         }
       }
     },
+    "events.loadError" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Events kunne ikke hentes. Prøv igen senere."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Events konnten nicht geladen werden. Bitte versuche es später erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Events couldn't be loaded. Please try again later."
+          }
+        }
+      }
+    },
     "events.nextMonth" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3134,6 +3157,29 @@
         }
       }
     },
+    "events.soldOut" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Udsolgt"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausverkauft"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sold out"
+          }
+        }
+      }
+    },
     "events.tabBoard" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3222,6 +3268,98 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Show this confirmation in the store."
+          }
+        }
+      }
+    },
+    "events.ticketCode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Billetkode"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ticketcode"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ticket code"
+          }
+        }
+      }
+    },
+    "events.ticketReserved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plads reserveret"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Platz reserviert"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seat reserved"
+          }
+        }
+      }
+    },
+    "events.ticketReservedNoDeadline" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Betal i butikken for at bekræfte din plads."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bezahle im Geschäft, um deinen Platz zu bestätigen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pay in store to confirm your seat."
+          }
+        }
+      }
+    },
+    "events.ticketReservedNote" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Betal i butikken senest {time} — ellers frigives pladsen."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bezahle bis {time} im Geschäft, sonst wird der Platz freigegeben."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pay in store by {time}, or the seat is released."
           }
         }
       }

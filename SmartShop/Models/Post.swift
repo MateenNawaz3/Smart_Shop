@@ -10,7 +10,7 @@ import SwiftUI
 /// Unlike UI copy, a post's text is *content*: it is written per post and will
 /// eventually come from the database, so it carries its own translations rather
 /// than living in the string catalog.
-struct Post: Identifiable, Codable, Hashable, Sendable {
+nonisolated struct Post: Identifiable, Codable, Hashable, Sendable {
     struct Localized: Codable, Hashable, Sendable {
         var da: String
         var en: String
@@ -31,7 +31,7 @@ struct Post: Identifiable, Codable, Hashable, Sendable {
         var src: String
         var alt: Localized
 
-        var image: ImageResource? {
+        @MainActor var image: ImageResource? {
             switch src {
             case "butik-facade.png": .butikFacade
             case "butik-indvendigt.png": .butikIndvendigt

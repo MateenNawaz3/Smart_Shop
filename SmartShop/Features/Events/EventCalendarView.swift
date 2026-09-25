@@ -11,12 +11,14 @@ struct EventCalendarView: View {
     @Environment(LanguageStore.self) private var languages
     @Environment(AppEnvironment.self) private var environment
 
-    @State private var cursor: Date = {
-        let first = AppEvent.all.first?.day ?? .now
-        return Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: first)) ?? .now
-    }()
+    @State private var cursor: Date = Self.month(of: .now)
+    /// Upcoming events from `eventService`, each carrying the customer's own
+    /// ticket. Starts empty rather than on the bundled list: a bundled event
+    /// has an id the server has never issued, so a seat taken on it would 404.
+    @State private var events: [AppEvent] = []
+    /// Once the customer has paged, loading must not yank them back.
+    @State private var hasMoved = false
     @State private var selected: String?
-    @State private var tickets: [String] = []
     @State private var buying: String?
     @State private var error: String?
 
@@ -27,7 +29,7 @@ struct EventCalendarView: View {
         let c = calendar.dateComponents([.year, .month], from: cursor)
         return String(format: "%04d-%02d", c.year!, c.month!)
     }
-    private var monthEvents: [AppEvent] { AppEvent.all.filter { $0.date.hasPrefix(monthPrefix) } }
+    private var monthEvents: [AppEvent] { events.filter { $0.date.hasPrefix(monthPrefix) } }
     private var shown: [AppEvent] { selected.map { day in monthEvents.filter { $0.date == day } } ?? monthEvents }
 
     var body: some View {
@@ -103,7 +105,21 @@ struct EventCalendarView: View {
 
             DemoNote(badge: t("events.demoBadge"), text: t("events.demoNote")).padding(.top, 20)
         }
-        .task { tickets = (try? await environment.verificationService.boughtTicketEventIds()) ?? [] }
+        .task { await load() }
+    }
+
+    private func load() async {
+        do {
+            events = try await environment.eventService.events()
+            // Open on the month of the next event, as the bundled calendar did.
+            if !hasMoved, let first = events.first?.day { cursor = Self.month(of: first) }
+        } catch {
+            if events.isEmpty { self.error = t("events.loadError") }
+        }
+    }
+
+    private static func month(of date: Date) -> Date {
+        Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: date)) ?? date
     }
 
     private var todayIso: String {
@@ -115,6 +131,7 @@ struct EventCalendarView: View {
     private var leadingBlanks: Int { (calendar.component(.weekday, from: cursor) + 5) % 7 }
 
     private func move(_ months: Int) {
+        hasMoved = true
         selected = nil
         cursor = calendar.date(byAdding: .month, value: months, to: cursor) ?? cursor
     }
@@ -131,7 +148,7 @@ struct EventCalendarView: View {
 
     private func eventCard(_ event: AppEvent) -> some View {
         let lang = languages.language
-        let bought = tickets.contains(event.id)
+        let ticket = event.myTicket.flatMap { $0.isHeld ? $0 : nil }
         return VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Label(event.day?.formatted(Date.FormatStyle(date: .long).locale(locale)) ?? event.date, systemImage: "calendar")
@@ -152,15 +169,14 @@ struct EventCalendarView: View {
             .font(Theme.body(.caption)).foregroundStyle(Theme.Colors.green.opacity(0.6))
 
             if event.priceKr > 0 {
-                if bought {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Label(t("events.ticketBought"), systemImage: "ticket")
-                            .font(Theme.display(.subheadline, weight: .bold)).foregroundStyle(Theme.Colors.green)
-                        Text(t("events.ticketBoughtNote")).font(Theme.body(.caption)).foregroundStyle(Theme.Colors.green.opacity(0.7))
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 16).padding(.vertical, 12)
-                    .background(Theme.Colors.lime.opacity(0.15), in: .rect(cornerRadius: Theme.Radius.field))
+                if let ticket {
+                    ticketBox(ticket)
+                } else if event.soldOut {
+                    Label(t("events.soldOut"), systemImage: "xmark.circle")
+                        .font(Theme.display(.subheadline, weight: .bold)).foregroundStyle(Theme.Colors.green.opacity(0.6))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Theme.Colors.green.opacity(0.05), in: .rect(cornerRadius: Theme.Radius.field))
                 } else {
                     Button {
                         Task { await buy(event) }
@@ -179,15 +195,54 @@ struct EventCalendarView: View {
         .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
     }
 
+    /// A paid seat is only held until it is paid for at the till, so it must
+    /// never read as bought. See `EventTicket`.
+    private func ticketBox(_ ticket: EventTicket) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if ticket.isAwaitingPayment {
+                Label(t("events.ticketReserved"), systemImage: "clock")
+                    .font(Theme.display(.subheadline, weight: .bold)).foregroundStyle(Theme.Colors.green)
+                Text(reservedNote(ticket)).font(Theme.body(.caption)).foregroundStyle(Theme.Colors.green.opacity(0.7))
+            } else {
+                Label(t("events.ticketBought"), systemImage: "ticket")
+                    .font(Theme.display(.subheadline, weight: .bold)).foregroundStyle(Theme.Colors.green)
+                Text(t("events.ticketBoughtNote")).font(Theme.body(.caption)).foregroundStyle(Theme.Colors.green.opacity(0.7))
+            }
+            if let code = ticket.code {
+                Text("\(t("events.ticketCode")): \(code)")
+                    .font(.system(.caption, design: .monospaced, weight: .semibold))
+                    .foregroundStyle(Theme.Colors.green)
+                    .textSelection(.enabled)
+                    .padding(.top, 4)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16).padding(.vertical, 12)
+        .background(Theme.Colors.lime.opacity(0.15), in: .rect(cornerRadius: Theme.Radius.field))
+    }
+
+    private func reservedNote(_ ticket: EventTicket) -> String {
+        guard let expiresAt = ticket.expiresAt else { return t("events.ticketReservedNoDeadline") }
+        let time = expiresAt.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened).locale(locale))
+        return t("events.ticketReservedNote").replacingOccurrences(of: "{time}", with: time)
+    }
+
     private func buy(_ event: AppEvent) async {
         error = nil
         buying = event.id
         defer { buying = nil }
         do {
-            try await environment.verificationService.buyTicket(for: event)
-            tickets = (try? await environment.verificationService.boughtTicketEventIds()) ?? tickets + [event.id]
+            let ticket = try await environment.eventService.takeSeat(at: event)
+            if let index = events.firstIndex(where: { $0.id == event.id }) {
+                events[index].myTicket = ticket
+            }
         } catch {
+            // A 409 is "sold out" or "you already hold one"; re-reading shows
+            // whichever it was, rather than a generic failure on a held seat.
             self.error = t("events.buyError")
         }
+        // Seats left moved either way.
+        await load()
+        if events.first(where: { $0.id == event.id })?.myTicket?.isHeld == true { error = nil }
     }
 }

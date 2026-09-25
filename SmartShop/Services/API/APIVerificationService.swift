@@ -14,7 +14,9 @@ import Foundation
 /// - status, method and document upload → `IdentityService` (`/identity/*`)
 /// - key fob, door taps and door history → `AccessService` (`/access/*`)
 /// - phone and email, with their verified flags → `GET /me`
-/// - tickets → `tickets`, the previous service, until events (module 10) moves
+/// - tickets → `tickets`, the previous service. Nothing calls these any more:
+///   the calendar moved to `EventService`. They stay only because the
+///   protocol still declares them.
 ///
 /// The screens are unchanged: they follow the design, which has a door reader,
 /// a checkout reader, a recent-activity list and a single key-fob field.
@@ -118,7 +120,7 @@ nonisolated struct APIVerificationService: VerificationService {
         }
     }
 
-    // MARK: - Tickets (module 10)
+    // MARK: - Tickets (superseded by EventService)
 
     func boughtTicketEventIds() async throws -> [String] {
         try await tickets.boughtTicketEventIds()
