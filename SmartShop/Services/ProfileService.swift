@@ -68,6 +68,19 @@ protocol ProfileService: Sendable {
         fornavn: String, efternavn: String, email: String, telefon: String,
         adresse: String, postnr: String, by: String
     ) async throws
+    /// Asks for the account to be erased (GDPR art. 17). Records the request
+    /// only: a person actions it, and sales records are kept for the five
+    /// years bogføringsloven §10 requires. `reason` is optional by law — it
+    /// cannot be a condition of the right.
+    func requestDeletion(reason: String?) async throws
+}
+
+extension ProfileService {
+    /// Backends with no deletion endpoint throw, so the sheet falls back to
+    /// the email address instead of claiming a request was recorded.
+    func requestDeletion(reason: String?) async throws {
+        throw UnsupportedAuthOperation(operation: "recording a deletion request")
+    }
 }
 
 struct SupabaseProfileService: ProfileService {

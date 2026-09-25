@@ -86,3 +86,8 @@ nonisolated struct UpdateProfileRequestDTO: Encodable, Sendable {
     var postalCode: String?
     var city: String?
 }
+
+/// `RequestDeletionDto`. The reason is omitted when nil.
+nonisolated struct DeletionRequestDTO: Encodable, Sendable {
+    var reason: String?
+}

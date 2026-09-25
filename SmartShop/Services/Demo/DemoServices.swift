@@ -149,6 +149,11 @@ struct DemoMitIDService: MitIDService {
 struct DemoProfileService: ProfileService {
     var backend: DemoBackend = .shared
 
+    /// Recorded nowhere, as on the server nothing is erased on request either.
+    func requestDeletion(reason: String?) async throws {
+        await DemoMode.pause(0.6)
+    }
+
     func firstName() async -> String? {
         let name = backend.account?.fornavn.trimmingCharacters(in: .whitespaces) ?? ""
         return name.isEmpty ? nil : name

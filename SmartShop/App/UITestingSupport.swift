@@ -71,6 +71,7 @@ enum UITesting {
 /// Fixed profile data so greetings are deterministic in tests and previews.
 struct StubProfileService: ProfileService {
     var name: String? = "Mateen"
+    func requestDeletion(reason: String?) async throws {}
     func firstName() async -> String? { name }
     func summary() async -> ProfileSummary? {
         ProfileSummary(fornavn: name ?? "", efternavn: "Nawaz", by: "Esbjerg", email: "mateen@example.com")

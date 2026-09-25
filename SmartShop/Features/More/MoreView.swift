@@ -148,20 +148,29 @@ struct MoreView: View {
     }
 }
 
-/// Bottom sheet explaining how to have the account deleted.
+/// Bottom sheet for asking to have the account deleted.
 /// Port of `components/app/DeleteAccountDialog.tsx`.
+///
+/// The web's `mailto:` link produced no record at all; the Mobile API records
+/// the request (`POST /me/deletion-request`) for a person to action. The
+/// address stays as the way out when the request cannot be sent, so this sheet
+/// never leaves someone with nowhere to go.
 struct DeleteAccountSheet: View {
     @Environment(\.strings) private var t
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    @Environment(AppEnvironment.self) private var environment
+
+    private enum Phase { case idle, sending, sent, failed }
+    @State private var phase: Phase = .idle
 
     var body: some View {
         VStack(spacing: 0) {
-            Image(systemName: "exclamationmark.triangle")
+            Image(systemName: phase == .sent ? "checkmark" : "exclamationmark.triangle")
                 .font(.system(size: 26, weight: .semibold))
-                .foregroundStyle(Theme.Colors.red)
+                .foregroundStyle(phase == .sent ? Theme.Colors.green : Theme.Colors.red)
                 .frame(width: 56, height: 56)
-                .background(Theme.Colors.red.opacity(0.1), in: .circle)
+                .background((phase == .sent ? Theme.Colors.lime : Theme.Colors.red).opacity(0.1), in: .circle)
 
             Text(t("more.deleteAccount.title"))
                 .font(Theme.display(.title3))
@@ -169,32 +178,57 @@ struct DeleteAccountSheet: View {
                 .padding(.top, Theme.Spacing.md)
 
             VStack(spacing: 4) {
-                Text(t("more.deleteAccount.descriptionPrefix"))
-                Button("info@smartshop24-7.dk") {
-                    if let url = URL(string: "mailto:info@smartshop24-7.dk?subject=Sletning%20af%20konto") { openURL(url) }
+                switch phase {
+                case .idle, .sending:
+                    Text(t("more.deleteAccount.requestDescription"))
+                case .sent:
+                    Text(t("more.deleteAccount.sent"))
+                case .failed:
+                    Text(t("more.deleteAccount.failed"))
+                    Button("info@smartshop24-7.dk") {
+                        if let url = URL(string: "mailto:info@smartshop24-7.dk?subject=Sletning%20af%20konto") { openURL(url) }
+                    }
+                    .buttonStyle(.plain)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Theme.Colors.green)
+                    .underline()
                 }
-                .buttonStyle(.plain)
-                .fontWeight(.semibold)
-                .foregroundStyle(Theme.Colors.green)
-                .underline()
-                Text(t("more.deleteAccount.descriptionSuffix").trimmingCharacters(in: CharacterSet(charactersIn: ", ")))
             }
             .font(Theme.body(.subheadline))
             .foregroundStyle(Theme.Colors.ink.opacity(0.6))
             .multilineTextAlignment(.center)
             .padding(.top, Theme.Spacing.sm)
 
+            if phase == .idle || phase == .sending {
+                Button(phase == .sending ? t("more.deleteAccount.sending") : t("more.deleteAccount.request")) {
+                    Task { await send() }
+                }
+                .buttonStyle(WidePillButtonStyle(background: Theme.Colors.red))
+                .disabled(phase == .sending)
+                .padding(.top, Theme.Spacing.lg)
+            }
+
             Button(t("more.deleteAccount.close")) { dismiss() }
                 .buttonStyle(WidePillButtonStyle(background: Theme.Colors.lime))
-                .padding(.top, Theme.Spacing.lg)
+                .padding(.top, phase == .idle || phase == .sending ? Theme.Spacing.sm : Theme.Spacing.lg)
         }
         .padding(Theme.Spacing.lg)
         .frame(maxWidth: 480)
         .frame(maxWidth: .infinity)
-        .presentationDetents([.height(380)])
+        .presentationDetents([.height(460)])
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(Theme.Radius.card)
         .presentationBackground(.white)
+    }
+
+    private func send() async {
+        phase = .sending
+        do {
+            try await environment.profileService.requestDeletion(reason: nil)
+            phase = .sent
+        } catch {
+            phase = .failed
+        }
     }
 }
 

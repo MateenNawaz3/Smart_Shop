@@ -7742,6 +7742,121 @@
         }
       }
     },
+    "more.deleteAccount.failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anmodningen kunne ikke sendes. Skriv i stedet til os på"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Anfrage konnte nicht gesendet werden. Schreib uns stattdessen an"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The request couldn't be sent. Instead, write to us at"
+          }
+        }
+      }
+    },
+    "more.deleteAccount.request" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anmod om sletning"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Löschung beantragen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Request deletion"
+          }
+        }
+      }
+    },
+    "more.deleteAccount.requestDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anmod om at få slettet din konto og dine oplysninger. Din nøglebrik lukkes samtidig. Kvitteringer for dine køb gemmer vi i fem år, som bogføringsloven kræver."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beantrage die Löschung deines Kontos und deiner Angaben. Dein Schlüsselanhänger wird gleichzeitig gesperrt. Belege deiner Einkäufe bewahren wir fünf Jahre auf, wie es das dänische Buchführungsgesetz verlangt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask us to delete your account and your details. Your key fob will be closed at the same time. Receipts for your purchases are kept for five years, as Danish bookkeeping law requires."
+          }
+        }
+      }
+    },
+    "more.deleteAccount.sending" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sender …"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird gesendet …"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sending …"
+          }
+        }
+      }
+    },
+    "more.deleteAccount.sent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vi har modtaget din anmodning og behandler den snarest."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wir haben deine Anfrage erhalten und bearbeiten sie in Kürze."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We've received your request and will handle it shortly."
+          }
+        }
+      }
+    },
     "more.deleteAccount.title" : {
       "extractionState" : "manual",
       "localizations" : {

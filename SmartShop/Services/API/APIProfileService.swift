@@ -46,6 +46,18 @@ nonisolated struct APIProfileService: ProfileService {
         )
     }
 
+    // MARK: - Deletion
+
+    /// `202`: recorded, not erased.
+    func requestDeletion(reason: String?) async throws {
+        let request = try APIRequest.json(
+            .post,
+            "/mobile/me/deletion-request",
+            body: DeletionRequestDTO(reason: reason?.nilWhenEmpty)
+        )
+        let _: EmptyResponse = try await client.send(request)
+    }
+
     // MARK: - Reads
 
     private func me() async throws -> CurrentCustomerDTO {

@@ -38,6 +38,8 @@ final class AppEnvironment {
     let eventService: any EventService
     /// The bulletin board.
     let postService: any PostService
+    /// Identifying the customer at a till. No screen uses it yet.
+    let handoffService: any HandoffService
     /// The backend a MitID sign-in talks to.
     ///
     /// The backend a MitID sign-in talks to.
@@ -73,6 +75,7 @@ final class AppEnvironment {
         // No default, for the same reason as `wheelService`.
         eventService: any EventService,
         postService: any PostService,
+        handoffService: any HandoffService,
         mitIDSignIn: (any AuthService)? = nil
     ) {
         self.authService = authService
@@ -92,6 +95,7 @@ final class AppEnvironment {
         self.purchaseService = purchaseService
         self.eventService = eventService
         self.postService = postService
+        self.handoffService = handoffService
         self.mitIDSignIn = mitIDSignIn ?? APIAuthService()
     }
 
@@ -176,6 +180,9 @@ final class AppEnvironment {
                 postService: UITesting.isActive && !UITesting.usesLiveAPI
                     ? BundledPostService()
                     : APIPostService(),
+                handoffService: UITesting.isActive && !UITesting.usesLiveAPI
+                    ? DemoHandoffService()
+                    : APIHandoffService(),
                 mitIDSignIn: api
             )
         }
@@ -218,6 +225,7 @@ final class AppEnvironment {
             postService: UITesting.isActive && !UITesting.usesLiveAPI
                 ? BundledPostService()
                 : APIPostService(),
+            handoffService: UITesting.isSignedIn ? DemoHandoffService() : APIHandoffService(),
             mitIDSignIn: api
         )
     }
