@@ -55,7 +55,8 @@ nonisolated struct APIEventService: EventService {
 
     // MARK: - Mapping
 
-    /// The server's text is Danish only, so every language shows the same.
+    /// The server translates by `x-localization`, so the response is already
+    /// in the chosen language; it fills every slot of `Localized`.
     private static func map(_ dto: EventDTO) -> AppEvent {
         func same(_ text: String) -> Post.Localized { Post.Localized(da: text, en: text, de: text) }
         return AppEvent(

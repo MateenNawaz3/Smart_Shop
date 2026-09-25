@@ -35,7 +35,9 @@ nonisolated struct APIPostService: PostService {
         return Self.map(post)
     }
 
-    /// Danish only on the server, so every language shows the same text.
+    /// The server translates by `x-localization`, so the response is already
+    /// in the chosen language; it fills every slot of `Localized`. Changing
+    /// language shows the new one on the next load.
     private static func map(_ dto: PostDTO) -> Post {
         func same(_ text: String) -> Post.Localized { Post.Localized(da: text, en: text, de: text) }
         // A media key that is not a URL yet is no picture, not a broken one.

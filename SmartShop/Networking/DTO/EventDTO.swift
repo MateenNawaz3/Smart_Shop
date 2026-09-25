@@ -22,8 +22,9 @@ import Foundation
 // A PAID ticket is never "paid": it comes back status `reserved` with
 // awaitingPayment true and an expiresAt. See `EventTicket`.
 
-/// One event. The text fields are single strings, in Danish, whatever the
-/// `Accept-Language` — the server has no translations for events.
+/// One event. The text fields are single strings, already translated into
+/// the language sent as `x-localization` — not `Accept-Language`, which the
+/// server ignores.
 nonisolated struct EventDTO: Decodable, Sendable {
     var id: String
     /// `YYYY-MM-DD`.

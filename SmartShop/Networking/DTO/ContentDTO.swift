@@ -26,7 +26,8 @@ nonisolated struct PageDTO: Decodable, Sendable {
     var updatedAt: Date?
 }
 
-/// `PostDto`. Text is single-language (Danish) on the server.
+/// `PostDto`. The text arrives already translated into the language sent as
+/// `x-localization` (`da` or `en`), so it is one string per response.
 nonisolated struct PostDTO: Decodable, Sendable {
     var id: String
     /// `YYYY-MM-DD`, newest first.
