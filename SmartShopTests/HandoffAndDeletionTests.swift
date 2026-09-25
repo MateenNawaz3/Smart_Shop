@@ -66,8 +66,8 @@ struct HandoffTokenTests {
 
         let before = Date.now
         let token = try await service.token()
-        #expect(token.expiresAt.timeIntervalSince(before) <= 60)
-        #expect(token.expiresAt.timeIntervalSince(before) > 55)
+        // Counted from when the service asked, a moment after `before`.
+        #expect(abs(token.expiresAt.timeIntervalSince(before) - 60) < 5)
     }
 
     @Test("an answer without a token is an error, not an empty code")

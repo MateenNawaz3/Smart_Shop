@@ -78,8 +78,9 @@ struct APIAuthServiceTests {
         #expect(tokens.accessToken == "access-1")
     }
 
-    /// `/auth/register` takes no address, so it arrives as a follow-up PATCH.
-    @Test("an address registers as a profile edit afterwards")
+    /// Since `ae1cf63` the address travels inside `/auth/register`; there is
+    /// no follow-up `PATCH /me` any more.
+    @Test("the address travels with the registration, in one request")
     func registerPatchesAddress() async throws {
         let (service, exchange, _) = makeService()
         exchange.queue(
@@ -97,10 +98,16 @@ struct APIAuthServiceTests {
             )
         )
 
+        // `try #require` rather than indexing: a missing request must fail
+        // this test, not trap and take every other test in the run with it.
         let recorded = exchange.recorded
-        #expect(recorded.count == 2)
-        #expect(recorded[1].url?.path == "/mobile/me")
-        #expect(recorded[1].httpMethod == "PATCH")
+        #expect(recorded.count == 1)
+        let register = try #require(recorded.first)
+        #expect(register.url?.path == "/mobile/auth/register")
+        let body = try #require(register.bodyText)
+        #expect(body.contains(#""addressLine1":"Testvej 1""#))
+        #expect(body.contains(#""postalCode":"6800""#))
+        #expect(body.contains(#""city":"Varde""#))
     }
 
     /// A failed address edit must not undo a successful registration — the

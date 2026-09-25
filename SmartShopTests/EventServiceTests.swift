@@ -39,7 +39,8 @@ struct APIEventServiceTests {
         #expect(events[1].priceKr == 149)
         #expect(events[1].seatsLeft == 13)
         #expect(events[1].myTicket == nil)
-        // Danish only on the server, so every language shows it.
+        // One string per response, translated server-side by `x-localization`,
+        // so every slot of `Localized` holds it.
         #expect(events[1].title(.en) == "Vinsmagning med vinekspert")
     }
 
