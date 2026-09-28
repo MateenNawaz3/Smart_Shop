@@ -51,9 +51,13 @@ nonisolated extension AppEvent {
 /// A seat at an event.
 ///
 /// **A paid ticket is never paid.** The server holds the seat as `reserved`
-/// with `awaitingPayment` until `expiresAt`, and payment happens by card at the
-/// till. Showing that as "bought" sends someone to an event believing they
-/// have paid for a seat that may already have been released.
+/// until `expiresAt` and then releases it: nothing in the platform can take
+/// the money or confirm the seat (backend, 2026-09-28). So a paid reservation
+/// is a place on a waiting list, and must never read as bought or as
+/// something the customer can pay for.
+///
+/// The four statuses are a closed database enum. Only a free event's seat is
+/// `confirmed`.
 nonisolated struct EventTicket: Sendable, Hashable {
     enum Status: Sendable, Hashable {
         case confirmed, reserved, cancelled, expired
@@ -64,7 +68,6 @@ nonisolated struct EventTicket: Sendable, Hashable {
     var id: String
     var eventID: String? = nil
     var status: Status
-    var awaitingPayment: Bool
     /// When a reserved seat is released. Nil on a confirmed ticket.
     var expiresAt: Date? = nil
     /// What the door scans.
@@ -79,8 +82,8 @@ nonisolated struct EventTicket: Sendable, Hashable {
         }
     }
 
-    /// Held, but still to be paid for in store.
-    var isAwaitingPayment: Bool {
-        isHeld && (awaitingPayment || status == .reserved)
+    /// Held as a paid reservation, which no payment can confirm today.
+    var isOnWaitingList: Bool {
+        isHeld && status == .reserved
     }
 }

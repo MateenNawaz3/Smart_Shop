@@ -2157,75 +2157,6 @@
         }
       }
     },
-    "events.buyError" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Billetten kunne ikke købes. Prøv igen."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Das Ticket konnte nicht gekauft werden. Bitte versuche es erneut."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The ticket couldn't be purchased. Please try again."
-          }
-        }
-      }
-    },
-    "events.buying" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Køber …"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wird gekauft …"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Buying …"
-          }
-        }
-      }
-    },
-    "events.buyTicket" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Køb billet"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ticket kaufen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Buy ticket"
-          }
-        }
-      }
-    },
     "events.calendarIntro" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2364,6 +2295,52 @@
         }
       }
     },
+    "events.joiningWaitingList" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skriver dig på …"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird eingetragen …"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Joining …"
+          }
+        }
+      }
+    },
+    "events.joinWaitingList" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skriv mig på ventelisten"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf die Warteliste setzen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Join the waiting list"
+          }
+        }
+      }
+    },
     "events.loadError" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2429,6 +2406,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "No events this month."
+          }
+        }
+      }
+    },
+    "events.onWaitingList" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du er på ventelisten"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du stehst auf der Warteliste"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You're on the waiting list"
           }
         }
       }
@@ -2686,75 +2686,6 @@
         }
       }
     },
-    "events.ticketReserved" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plads reserveret"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Platz reserviert"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Seat reserved"
-          }
-        }
-      }
-    },
-    "events.ticketReservedNoDeadline" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Betal i butikken for at bekræfte din plads."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bezahle im Geschäft, um deinen Platz zu bestätigen."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pay in store to confirm your seat."
-          }
-        }
-      }
-    },
-    "events.ticketReservedNote" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Betal i butikken senest {time} — ellers frigives pladsen."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bezahle bis {time} im Geschäft, sonst wird der Platz freigegeben."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pay in store by {time}, or the seat is released."
-          }
-        }
-      }
-    },
     "events.timeLabel" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2820,6 +2751,75 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Upcoming events"
+          }
+        }
+      }
+    },
+    "events.waitingListError" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vi kunne ikke skrive dig på ventelisten. Prøv igen."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wir konnten dich nicht auf die Warteliste setzen. Bitte versuche es erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We couldn't add you to the waiting list. Please try again."
+          }
+        }
+      }
+    },
+    "events.waitingListNoDeadline" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Billetter til betalte arrangementer kan endnu ikke betales."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tickets für kostenpflichtige Veranstaltungen können noch nicht bezahlt werden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tickets for paid events can't be paid for yet."
+          }
+        }
+      }
+    },
+    "events.waitingListNote" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Billetter til betalte arrangementer kan endnu ikke betales. Vi holder din plads til {time}."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tickets für kostenpflichtige Veranstaltungen können noch nicht bezahlt werden. Wir halten deinen Platz bis {time}."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tickets for paid events can't be paid for yet. We'll hold your place until {time}."
           }
         }
       }
@@ -15858,6 +15858,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The door is open — welcome in!"
+          }
+        }
+      }
+    },
+    "verify.nfc.doorSilent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adgang givet, men døren åbnede ikke."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zugang gewährt, aber die Tür hat sich nicht geöffnet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Access granted, but the door didn't open."
           }
         }
       }

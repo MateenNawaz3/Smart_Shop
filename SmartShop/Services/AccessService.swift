@@ -44,6 +44,9 @@ nonisolated struct AccessEvent: Sendable, Equatable, Identifiable {
     var at: Date
     var granted: Bool
     var reason: String?
+    var storeName: String? = nil
+    /// Whether a physical door moved, which a grant alone does not say.
+    var doorUnlocked: Bool = false
 }
 
 nonisolated struct UnlockOutcome: Sendable, Equatable {
@@ -52,5 +55,6 @@ nonisolated struct UnlockOutcome: Sendable, Equatable {
     var doorOpened: Bool
     /// One of the seven refusal reasons, such as `not_verified`.
     var reason: String?
+    /// The server's finished sentence for the customer. Show it as-is.
     var message: String?
 }

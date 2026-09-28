@@ -77,9 +77,9 @@ nonisolated struct APIEventService: EventService {
 
     private static func map(_ dto: EventTicketDTO) -> EventTicket {
         let status: EventTicket.Status = switch dto.status {
-        case "confirmed", "paid", "active", "issued": .confirmed
-        case "reserved", "held", "pending": .reserved
-        case "cancelled", "canceled", "released": .cancelled
+        case "confirmed": .confirmed
+        case "reserved": .reserved
+        case "cancelled": .cancelled
         case "expired": .expired
         default: .other(dto.status)
         }
@@ -87,7 +87,6 @@ nonisolated struct APIEventService: EventService {
             id: dto.id,
             eventID: dto.eventId,
             status: status,
-            awaitingPayment: dto.awaitingPayment,
             expiresAt: dto.expiresAt,
             code: dto.code
         )

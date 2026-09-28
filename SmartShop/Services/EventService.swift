@@ -63,6 +63,6 @@ struct DemoEventService: EventService {
 
     /// A demo ticket's id is its event's id: the demo backend stores only that.
     private static func ticket(for eventID: String) -> EventTicket {
-        EventTicket(id: eventID, eventID: eventID, status: .confirmed, awaitingPayment: false)
+        EventTicket(id: eventID, eventID: eventID, status: .confirmed)
     }
 }

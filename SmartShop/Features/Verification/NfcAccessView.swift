@@ -15,7 +15,8 @@ struct NfcAccessView: View {
     @Environment(AppEnvironment.self) private var environment
 
     private enum Point: String { case door = "doer", checkout = "kasse" }
-    private enum Phase: Equatable { case scanning(Point), ok(Point), denied }
+    /// `message` is the server's sentence, which replaces the app's copy.
+    private enum Phase: Equatable { case scanning(Point), ok(Point, doorOpened: Bool, message: String?), denied(message: String?, reason: String?) }
 
     @State private var info = VerificationInfo()
     @State private var store: Store?
@@ -57,8 +58,13 @@ struct NfcAccessView: View {
                 VStack(spacing: 8) {
                     ForEach(log) { entry in
                         HStack(spacing: 12) {
-                            Text(entry.point == "doer" ? t("verify.nfc.pointDoor") : t("verify.nfc.pointCheckout"))
-                                .font(Theme.body(.subheadline, weight: .semibold)).foregroundStyle(Theme.Colors.green)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(entry.point == "doer" ? t("verify.nfc.pointDoor") : t("verify.nfc.pointCheckout"))
+                                    .font(Theme.body(.subheadline, weight: .semibold)).foregroundStyle(Theme.Colors.green)
+                                if let storeName = entry.storeName {
+                                    Text(storeName).font(Theme.body(.caption)).foregroundStyle(Theme.Colors.green.opacity(0.6))
+                                }
+                            }
                             Spacer()
                             Text(entry.at.formatted(Date.FormatStyle(date: .numeric, time: .shortened).locale(languages.language.locale)))
                                 .font(Theme.body(.caption)).foregroundStyle(Theme.Colors.green.opacity(0.6))
@@ -104,34 +110,51 @@ struct NfcAccessView: View {
                 Image(systemName: "wave.3.right").font(.system(size: 44)).foregroundStyle(Theme.Colors.lime)
                     .symbolEffect(.pulse)
                 Text(t("verify.nfc.scanning")).font(Theme.display(.title2)).foregroundStyle(.white)
-            case .ok(let point):
+            case .ok(let point, let doorOpened, let message):
                 Image(systemName: point == .door ? "door.left.hand.open" : "barcode.viewfinder").font(.system(size: 44)).foregroundStyle(Theme.Colors.lime)
-                Text(point == .door ? t("verify.nfc.doorOk") : t("verify.nfc.checkoutOk"))
+                // A grant is not an open door: never say "the door is open"
+                // when no door moved.
+                Text(point == .checkout ? t("verify.nfc.checkoutOk") : doorOpened ? t("verify.nfc.doorOk") : t("verify.nfc.doorSilent"))
                     .font(Theme.display(.title2)).foregroundStyle(.white).multilineTextAlignment(.center)
+                if let message {
+                    Text(message).font(Theme.body(.subheadline)).foregroundStyle(.white.opacity(0.8)).multilineTextAlignment(.center)
+                }
                 Button(t("verify.nfc.again")) { self.phase = nil }
                     .buttonStyle(PillButtonStyle(background: Theme.Colors.lime))
                     .padding(.top, 8)
-            case .denied:
+            case .denied(let message, let reason):
                 Image(systemName: "xmark.shield").font(.system(size: 44)).foregroundStyle(Theme.Colors.red)
                 Text(t("verify.nfc.denied")).font(Theme.display(.title2)).foregroundStyle(Theme.Colors.green)
-                Text(t("verify.nfc.deniedReason")).font(Theme.body(.subheadline)).foregroundStyle(Theme.Colors.green.opacity(0.7))
-                Button(t("verify.nfc.verifyCta"), action: onVerify)
-                    .buttonStyle(PillButtonStyle(background: Theme.Colors.green))
-                    .padding(.top, 8)
+                Text(message ?? t("verify.nfc.deniedReason"))
+                    .font(Theme.body(.subheadline)).foregroundStyle(Theme.Colors.green.opacity(0.7)).multilineTextAlignment(.center)
+                // Verifying only helps when that is why the door said no.
+                if reason == nil || reason == "not_verified" {
+                    Button(t("verify.nfc.verifyCta"), action: onVerify)
+                        .buttonStyle(PillButtonStyle(background: Theme.Colors.green))
+                        .padding(.top, 8)
+                }
                 Button(t("verify.nfc.again")) { self.phase = nil }
                     .font(Theme.body(.subheadline, weight: .semibold)).foregroundStyle(Theme.Colors.green).underline()
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 32).padding(.horizontal, 20)
-        .background(phase == .denied ? Theme.Colors.red.opacity(0.1) : Theme.Colors.green, in: .rect(cornerRadius: Theme.Radius.card))
+        .background(isDenied(phase) ? Theme.Colors.red.opacity(0.1) : Theme.Colors.green, in: .rect(cornerRadius: Theme.Radius.card))
+    }
+
+    private func isDenied(_ phase: Phase) -> Bool {
+        if case .denied = phase { true } else { false }
     }
 
     private func tap(_ point: Point) async {
         phase = .scanning(point)
-        async let ok = (try? environment.verificationService.logNfcAccess(point: point.rawValue, storeSlug: store?.slug)) ?? false
+        async let answer = (try? environment.verificationService.logNfcAccess(point: point.rawValue, storeSlug: store?.slug))
+            ?? NfcAccessResult(approved: false)
         try? await Task.sleep(for: .seconds(1.2))
-        phase = await ok ? .ok(point) : .denied
+        let result = await answer
+        phase = result.approved
+            ? .ok(point, doorOpened: result.doorOpened, message: result.message)
+            : .denied(message: result.message, reason: result.reason)
         log = (try? await environment.verificationService.recentNfcAccess()) ?? []
     }
 }

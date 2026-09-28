@@ -235,11 +235,15 @@ struct APIVerificationServiceTests {
     @Test("the door asks the server, with no reader id from a simulated tap")
     func doorAsksServer() async throws {
         let access = FakeAccess()
-        access.outcome = UnlockOutcome(granted: false, doorOpened: false, reason: "not_verified")
+        access.outcome = UnlockOutcome(granted: false, doorOpened: false, reason: "not_verified",
+                                       message: "Verify your identity in the app before your first visit.")
         let (service, _) = make(access: access)
 
-        let granted = try await service.logNfcAccess(point: "doer", storeSlug: "espe")
-        #expect(!granted)
+        let result = try await service.logNfcAccess(point: "doer", storeSlug: "espe")
+        #expect(!result.approved)
+        #expect(result.reason == "not_verified")
+        // The server's sentence is passed through, not replaced by ours.
+        #expect(result.message == "Verify your identity in the app before your first visit.")
         #expect(access.log == ["unlock:none"])
     }
 
@@ -251,7 +255,7 @@ struct APIVerificationServiceTests {
         let access = FakeAccess()
         let (service, _) = make(identity: identity, access: access)
 
-        #expect(try await service.logNfcAccess(point: "kasse", storeSlug: nil))
+        #expect(try await service.logNfcAccess(point: "kasse", storeSlug: nil).approved)
         #expect(access.log.isEmpty)
     }
 
@@ -412,25 +416,27 @@ struct TicketStatusTests {
     private func ticket(status: String) async throws -> EventTicket {
         let (client, exchange) = makeStubbedClient(tokens: FakeTokenStore(access: "a", refresh: "r"))
         exchange.queue(.init(status: 200, body: """
-        {"success":true,"data":[{"id":"t1","status":"\(status)","awaitingPayment":false}]}
+        {"success":true,"data":[{"id":"t1","status":"\(status)"}]}
         """))
         return try #require(try await APIEventService(client: client).myTickets().first)
     }
 
-    @Test("held statuses", arguments: ["confirmed", "paid", "CONFIRMED"])
+    @Test("held statuses", arguments: ["confirmed", "CONFIRMED"])
     func held(status: String) async throws {
         #expect(try await ticket(status: status).isHeld)
     }
 
-    @Test("not-held statuses", arguments: ["cancelled", "canceled", "released", "expired", "refunded", ""])
+    /// The set is closed (confirmed, reserved, cancelled, expired), so any other
+    /// word, including a paid state that does not exist, is not held.
+    @Test("not-held statuses", arguments: ["cancelled", "expired", "paid", "canceled", "refunded", ""])
     func notHeld(status: String) async throws {
         #expect(try await !ticket(status: status).isHeld)
     }
 
-    @Test("reserved with no expiry is held and awaiting payment")
+    @Test("reserved with no expiry is held, on the waiting list")
     func reserved() async throws {
         let ticket = try await ticket(status: "reserved")
         #expect(ticket.isHeld)
-        #expect(ticket.isAwaitingPayment)
+        #expect(ticket.isOnWaitingList)
     }
 }

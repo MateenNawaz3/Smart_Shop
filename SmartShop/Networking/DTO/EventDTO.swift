@@ -13,14 +13,14 @@ import Foundation
 //   GET /mobile/me/tickets
 //   DELETE /mobile/me/tickets/{id}
 //
-// `EventDTO` is read from a live payload (dev, 2026-09-25). The ticket shape is
-// not: the spec types no response here, the public endpoints never show a
-// ticket, and the documented facts are only `status`, `awaitingPayment`,
-// `expiresAt` and `code`. So the ticket is read tolerantly, like the access
-// types, and a status it cannot read counts as not held.
+// `EventDTO` is read from a live payload (dev, 2026-09-25). The ticket shape
+// was confirmed by the backend on 2026-09-28: `status` is a closed set of
+// `confirmed`, `reserved`, `cancelled` and `expired`, and there is no
+// `awaitingPayment` field. A status this build does not know counts as not
+// held.
 //
-// A PAID ticket is never "paid": it comes back status `reserved` with
-// awaitingPayment true and an expiresAt. See `EventTicket`.
+// A PAID ticket is never "paid": it comes back `reserved` with an expiresAt,
+// and is released then. See `EventTicket`.
 
 /// One event. The text fields are single strings, already translated into
 /// the language sent as `x-localization` — not `Accept-Language`, which the
@@ -47,9 +47,8 @@ nonisolated struct EventDTO: Decodable, Sendable {
 nonisolated struct EventTicketDTO: Decodable, Sendable {
     var id: String
     var eventId: String?
-    /// `confirmed`, `reserved`, `cancelled`, … — documented only by example.
+    /// `confirmed`, `reserved`, `cancelled` or `expired`.
     var status: String
-    var awaitingPayment: Bool
     var expiresAt: Date?
     var code: String?
 
@@ -65,9 +64,8 @@ nonisolated struct EventTicketDTO: Decodable, Sendable {
         eventId = c.first(String.self, "eventId")
             ?? (try? c.nestedContainer(keyedBy: AnyCodingKey.self, forKey: AnyCodingKey("event")))?
                 .first(String.self, "id")
-        status = c.first(String.self, "status", "state")?.lowercased() ?? ""
-        awaitingPayment = c.first(Bool.self, "awaitingPayment") ?? false
-        expiresAt = c.first(Date.self, "expiresAt", "holdExpiresAt")
+        status = c.first(String.self, "status")?.lowercased() ?? ""
+        expiresAt = c.first(Date.self, "expiresAt")
         code = c.first(String.self, "code", "ticketCode", "barcode")
     }
 }

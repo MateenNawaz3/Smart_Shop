@@ -13,17 +13,20 @@ import Foundation
 //   POST /mobile/access/unlock
 //   POST /mobile/access/help
 //
-// The spec (`/mobile/docs-json`) types every request here but **none of the
-// responses**, and neither the Postman collection nor the integration guide
-// carries an example. The response types below are therefore read
-// tolerantly: each field accepts the handful of names the server's
-// conventions make likely, and anything unreadable falls to the safe side —
-// a decision we cannot read is a refusal, never a grant. Replace the
-// alternatives with the one real name once a live payload has been seen.
+// The response shapes were confirmed by the backend on 2026-09-28, after our
+// first guesses got history and revocation wrong:
 //
-// The unlock response carries a decision and one of seven refusal reasons.
-// doorOpened is false when the decision was a grant but no physical door
-// responded — those are different facts and the UI must not merge them.
+//   unlock   {granted, reason, message, storeName, doorOpened}
+//   history  {id, storeName, method, result, denialReason, doorUnlocked, occurredAt}
+//
+// The same fact is `doorOpened` on unlock and `doorUnlocked` on history. That
+// is deliberate on their side (renaming would break working clients), so do
+// not "fix" one to match the other.
+//
+// Anything missing still falls to the safe side: a decision we cannot read is
+// a refusal, never a grant. doorOpened is false when the decision was a grant
+// but no physical door responded — different facts, and the UI must not merge
+// them.
 
 /// `AddCredentialDto`.
 nonisolated struct AddCredentialRequestDTO: Encodable, Sendable {
@@ -111,38 +114,28 @@ nonisolated struct AccessCredentialDTO: Decodable, Sendable {
     /// Minted by the server for a phone or QR credential and returned ONCE,
     /// on creation. Never present in a listing.
     var secret: String?
-    var revoked: Bool
+    /// A revoked credential stays in the list with `status: "revoked"`: the
+    /// server keeps the record of what was issued. There is no `revokedAt`.
+    var status: String?
 
-    init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: AnyCodingKey.self)
-        guard let id = c.first(String.self, "id", "credentialId") else {
-            throw DecodingError.keyNotFound(AnyCodingKey("id"), .init(codingPath: c.codingPath, debugDescription: "credential without an id"))
-        }
-        self.id = id
-        type = c.first(String.self, "type") ?? ""
-        label = c.first(String.self, "label")
-        lastFour = c.first(String.self, "last4", "lastFour", "identifierLast4", "identifierHint", "hint", "maskedIdentifier")
-        secret = c.first(String.self, "secret", "credentialSecret")
-        revoked = c.first(Bool.self, "revoked", "isRevoked")
-            ?? (c.first(String.self, "revokedAt") != nil)
-    }
+    var revoked: Bool { status?.lowercased() == "revoked" }
 }
 
 /// One entry of `/access/history`: a grant or a refusal at a door.
 nonisolated struct AccessEventDTO: Decodable, Sendable {
     var id: String
-    var at: Date
-    var granted: Bool
+    var occurredAt: Date
+    var storeName: String?
+    /// `nfc`, `qr` or `app_button`.
+    var method: String?
+    /// `granted` or `denied`. A string here, where unlock sends a boolean.
+    var result: String?
     /// One of the seven refusal reasons, on a refusal.
-    var reason: String?
+    var denialReason: String?
+    /// Whether a physical door moved. `doorOpened` on unlock.
+    var doorUnlocked: Bool?
 
-    init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: AnyCodingKey.self)
-        at = c.first(Date.self, "occurredAt", "createdAt", "at", "timestamp") ?? .now
-        id = c.first(String.self, "id") ?? UUID().uuidString
-        granted = AccessDecision.isGrant(c)
-        reason = c.first(String.self, "reason", "denialReason", "refusalReason")
-    }
+    var granted: Bool { result?.lowercased() == "granted" }
 }
 
 /// `POST /access/unlock`.
@@ -151,35 +144,28 @@ nonisolated struct UnlockResultDTO: Decodable, Sendable {
     /// False on a grant when no physical door responded. A different fact from
     /// the decision, and the one that says whether to walk in.
     var doorOpened: Bool
+    /// One of the seven refusal reasons, such as `not_verified`.
     var reason: String?
-    /// Something the customer can act on, written by the server.
+    /// A finished sentence for the customer, written per reason by the server.
+    /// It also covers a grant where the door stayed shut. Show it as-is.
     var message: String?
+    var storeName: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case granted, doorOpened, reason, message, storeName
+    }
 
     init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: AnyCodingKey.self)
-        granted = AccessDecision.isGrant(c)
-        doorOpened = c.first(Bool.self, "doorOpened") ?? false
-        reason = c.first(String.self, "reason", "denialReason", "refusalReason")
-        message = c.first(String.self, "message", "customerMessage")
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        granted = (try? c.decodeIfPresent(Bool.self, forKey: .granted)) ?? false
+        doorOpened = (try? c.decodeIfPresent(Bool.self, forKey: .doorOpened)) ?? false
+        reason = try? c.decodeIfPresent(String.self, forKey: .reason)
+        message = try? c.decodeIfPresent(String.self, forKey: .message)
+        storeName = try? c.decodeIfPresent(String.self, forKey: .storeName)
     }
 }
 
 /// `POST /access/help` answers with the store's phone number.
 nonisolated struct DoorHelpResultDTO: Decodable, Sendable {
-    var phone: String?
-
-    init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: AnyCodingKey.self)
-        phone = c.first(String.self, "storePhone", "phone", "phoneNumber", "contactPhone")
-    }
-}
-
-/// Reads a door decision from whichever form it arrives in. Anything that is
-/// not recognisably a grant is a refusal.
-nonisolated enum AccessDecision {
-    static func isGrant(_ c: KeyedDecodingContainer<AnyCodingKey>) -> Bool {
-        if let flag = c.first(Bool.self, "granted", "allowed", "approved", "ok") { return flag }
-        let word = c.first(String.self, "decision", "outcome", "result")?.lowercased()
-        return word == "granted" || word == "grant" || word == "allow" || word == "allowed"
-    }
+    var storePhone: String?
 }

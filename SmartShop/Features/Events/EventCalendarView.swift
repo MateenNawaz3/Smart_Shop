@@ -181,7 +181,7 @@ struct EventCalendarView: View {
                     Button {
                         Task { await buy(event) }
                     } label: {
-                        Label(buying == event.id ? t("events.buying") : "\(t("events.buyTicket")) · \(event.priceKr) kr.", systemImage: "ticket")
+                        Label(buying == event.id ? t("events.joiningWaitingList") : t("events.joinWaitingList"), systemImage: "clock")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(WidePillButtonStyle(background: Theme.Colors.lime))
@@ -195,12 +195,12 @@ struct EventCalendarView: View {
         .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
     }
 
-    /// A paid seat is only held until it is paid for at the till, so it must
-    /// never read as bought. See `EventTicket`.
+    /// A paid seat is only held until it expires, and nothing can pay for it,
+    /// so it reads as a waiting list — never as bought. See `EventTicket`.
     private func ticketBox(_ ticket: EventTicket) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            if ticket.isAwaitingPayment {
-                Label(t("events.ticketReserved"), systemImage: "clock")
+            if ticket.isOnWaitingList {
+                Label(t("events.onWaitingList"), systemImage: "clock")
                     .font(Theme.display(.subheadline, weight: .bold)).foregroundStyle(Theme.Colors.green)
                 Text(reservedNote(ticket)).font(Theme.body(.caption)).foregroundStyle(Theme.Colors.green.opacity(0.7))
             } else {
@@ -222,9 +222,9 @@ struct EventCalendarView: View {
     }
 
     private func reservedNote(_ ticket: EventTicket) -> String {
-        guard let expiresAt = ticket.expiresAt else { return t("events.ticketReservedNoDeadline") }
+        guard let expiresAt = ticket.expiresAt else { return t("events.waitingListNoDeadline") }
         let time = expiresAt.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened).locale(locale))
-        return t("events.ticketReservedNote").replacingOccurrences(of: "{time}", with: time)
+        return t("events.waitingListNote").replacingOccurrences(of: "{time}", with: time)
     }
 
     private func buy(_ event: AppEvent) async {
@@ -239,7 +239,7 @@ struct EventCalendarView: View {
         } catch {
             // A 409 is "sold out" or "you already hold one"; re-reading shows
             // whichever it was, rather than a generic failure on a held seat.
-            self.error = t("events.buyError")
+            self.error = t("events.waitingListError")
         }
         // Seats left moved either way.
         await load()

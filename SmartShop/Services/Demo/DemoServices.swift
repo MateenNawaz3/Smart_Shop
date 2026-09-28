@@ -295,10 +295,10 @@ struct DemoVerificationService: VerificationService {
         backend.updateAccount { $0.noeglebrikNummer = number }
     }
 
-    func logNfcAccess(point: String, storeSlug: String?) async throws -> Bool {
+    func logNfcAccess(point: String, storeSlug: String?) async throws -> NfcAccessResult {
         let verified = backend.account?.verifikationStatus == "verificeret"
         backend.write { $0.nfcLog.insert(.init(point: point, approved: verified, at: .now), at: 0) }
-        return verified
+        return NfcAccessResult(approved: verified)
     }
 
     func recentNfcAccess() async throws -> [NfcAccessEntry] {

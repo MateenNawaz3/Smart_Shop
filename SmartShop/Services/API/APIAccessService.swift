@@ -7,7 +7,7 @@ import Foundation
 
 /// `AccessService` over the Mobile API.
 ///
-/// The response shapes are not documented anywhere yet — see `AccessDTO`.
+/// The response shapes are confirmed by the backend — see `AccessDTO`.
 nonisolated struct APIAccessService: AccessService {
     private let client: any APIClient
 
@@ -63,7 +63,16 @@ nonisolated struct APIAccessService: AccessService {
             query: [URLQueryItem(name: "limit", value: String(limit))]
         )
         let list: AccessListDTO<AccessEventDTO> = try await client.send(request)
-        return list.items.map { AccessEvent(id: $0.id, at: $0.at, granted: $0.granted, reason: $0.reason) }
+        return list.items.map {
+            AccessEvent(
+                id: $0.id,
+                at: $0.occurredAt,
+                granted: $0.granted,
+                reason: $0.denialReason,
+                storeName: $0.storeName,
+                doorUnlocked: $0.doorUnlocked ?? false
+            )
+        }
     }
 
     func help(accessPointID: String?, storeID: String?, note: String?) async throws -> String? {
@@ -73,7 +82,7 @@ nonisolated struct APIAccessService: AccessService {
             body: DoorHelpRequestDTO(accessPointId: accessPointID, storeId: storeID, note: note)
         )
         let result: DoorHelpResultDTO = try await client.send(request)
-        return result.phone
+        return result.storePhone
     }
 
     private static func map(_ dto: AccessCredentialDTO) -> AccessCredential {

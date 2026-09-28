@@ -40,6 +40,8 @@ final class AppEnvironment {
     let postService: any PostService
     /// Identifying the customer at a till. No screen uses it yet.
     let handoffService: any HandoffService
+    /// The notification inbox and its badge. No screen uses it yet.
+    let notificationService: any NotificationService
     /// The backend a MitID sign-in talks to.
     ///
     /// The backend a MitID sign-in talks to.
@@ -76,6 +78,8 @@ final class AppEnvironment {
         eventService: any EventService,
         postService: any PostService,
         handoffService: any HandoffService,
+        // No default, for the same reason as `wheelService`.
+        notificationService: any NotificationService,
         mitIDSignIn: (any AuthService)? = nil
     ) {
         self.authService = authService
@@ -96,6 +100,7 @@ final class AppEnvironment {
         self.eventService = eventService
         self.postService = postService
         self.handoffService = handoffService
+        self.notificationService = notificationService
         self.mitIDSignIn = mitIDSignIn ?? APIAuthService()
     }
 
@@ -183,6 +188,10 @@ final class AppEnvironment {
                 handoffService: UITesting.isActive && !UITesting.usesLiveAPI
                     ? DemoHandoffService()
                     : APIHandoffService(),
+                // The inbox needs only a session, so demo mode reads it too.
+                notificationService: UITesting.isActive && !UITesting.usesLiveAPI
+                    ? DemoNotificationService()
+                    : APINotificationService(),
                 mitIDSignIn: api
             )
         }
@@ -226,6 +235,7 @@ final class AppEnvironment {
                 ? BundledPostService()
                 : APIPostService(),
             handoffService: UITesting.isSignedIn ? DemoHandoffService() : APIHandoffService(),
+            notificationService: UITesting.isSignedIn ? DemoNotificationService() : APINotificationService(),
             mitIDSignIn: api
         )
     }

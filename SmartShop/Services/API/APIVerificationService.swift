@@ -106,17 +106,23 @@ nonisolated struct APIVerificationService: VerificationService {
     ///
     /// The checkout has no endpoint. It reads the same fact the door does —
     /// `isVerified` — and is not logged, because there is nowhere to log it.
-    func logNfcAccess(point: String, storeSlug: String?) async throws -> Bool {
+    func logNfcAccess(point: String, storeSlug: String?) async throws -> NfcAccessResult {
         guard point == "doer" else {
-            return try await identity.status().state == .verified
+            return NfcAccessResult(approved: try await identity.status().state == .verified)
         }
-        return try await access.unlock(accessPointID: nil).granted
+        let outcome = try await access.unlock(accessPointID: nil)
+        return NfcAccessResult(
+            approved: outcome.granted,
+            doorOpened: outcome.doorOpened,
+            message: outcome.message,
+            reason: outcome.reason
+        )
     }
 
     /// The server's history is door events only.
     func recentNfcAccess() async throws -> [NfcAccessEntry] {
         try await access.history(limit: 5).map {
-            NfcAccessEntry(id: $0.id, point: "doer", approved: $0.granted, at: $0.at)
+            NfcAccessEntry(id: $0.id, point: "doer", approved: $0.granted, at: $0.at, storeName: $0.storeName)
         }
     }
 

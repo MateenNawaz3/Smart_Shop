@@ -56,12 +56,12 @@ struct APIEventServiceTests {
 
     /// The one to get right: a customer who sees "bought" turns up believing
     /// they have paid for a seat that may already have been released.
-    @Test("a paid seat comes back reserved, and is never shown as bought")
+    @Test("a paid seat comes back reserved, and is only a place on the waiting list")
     func paidSeatIsReserved() async throws {
         let (service, exchange) = makeService()
         exchange.queue(.init(status: 201, body: """
         {"success":true,"data":{"id":"t1","eventId":"e1","status":"reserved",
-          "awaitingPayment":true,"expiresAt":"2099-10-05T17:00:00.000Z","code":"EVT-123"}}
+          "expiresAt":"2099-10-05T17:00:00.000Z","code":"EVT-123"}}
         """))
 
         let event = AppEvent(id: "e1", date: "2026-10-05", time: "19:00-21:30",
@@ -72,38 +72,37 @@ struct APIEventServiceTests {
         #expect(exchange.recorded.first?.httpMethod == "POST")
         #expect(exchange.recorded.first?.url?.path == "/mobile/events/e1/tickets")
         #expect(ticket.isHeld)
-        #expect(ticket.isAwaitingPayment)
+        #expect(ticket.isOnWaitingList)
         #expect(ticket.code == "EVT-123")
     }
 
     @Test("a reservation past its expiry is no longer held")
     func expiredReservation() {
-        let ticket = EventTicket(id: "t1", status: .reserved, awaitingPayment: true,
-                                 expiresAt: .now.addingTimeInterval(-60))
+        let ticket = EventTicket(id: "t1", status: .reserved, expiresAt: .now.addingTimeInterval(-60))
         #expect(!ticket.isHeld)
-        #expect(!ticket.isAwaitingPayment)
+        #expect(!ticket.isOnWaitingList)
     }
 
     @Test("a free seat is confirmed at once")
     func freeSeatConfirmed() {
-        let ticket = EventTicket(id: "t1", status: .confirmed, awaitingPayment: false)
+        let ticket = EventTicket(id: "t1", status: .confirmed)
         #expect(ticket.isHeld)
-        #expect(!ticket.isAwaitingPayment)
+        #expect(!ticket.isOnWaitingList)
     }
 
     @Test("an unknown status is read as not held")
     func unknownStatus() {
-        #expect(!EventTicket(id: "t1", status: .other("refunded"), awaitingPayment: false).isHeld)
+        #expect(!EventTicket(id: "t1", status: .other("refunded")).isHeld)
     }
 
     @Test("my tickets read bare or paginated")
     func myTicketsShapes() async throws {
         let (service, exchange) = makeService()
         exchange.queue(.init(status: 200, body: """
-        {"success":true,"data":{"items":[{"id":"t1","status":"confirmed","awaitingPayment":false}],"total":1}}
+        {"success":true,"data":{"items":[{"id":"t1","status":"confirmed"}],"total":1}}
         """))
         exchange.queue(.init(status: 200, body: """
-        {"success":true,"data":[{"id":"t2","status":"cancelled","awaitingPayment":false}]}
+        {"success":true,"data":[{"id":"t2","status":"cancelled"}]}
         """))
 
         #expect(try await service.myTickets().map(\.id) == ["t1"])
@@ -130,12 +129,12 @@ struct APIAccessServiceTests {
         return (APIAccessService(client: client), exchange)
     }
 
-    /// The response shape is undocumented. Whatever it turns out to be, a
-    /// decision this build cannot read must never open the door.
+    /// A decision this build cannot read must never open the door, including
+    /// the string form history uses, which unlock does not.
     @Test("an unreadable decision is a refusal")
     func unreadableDecisionRefuses() async throws {
         let (service, exchange) = makeService()
-        exchange.queue(.init(status: 200, body: #"{"success":true,"data":{"verdict":"yes"}}"#))
+        exchange.queue(.init(status: 200, body: #"{"success":true,"data":{"result":"granted"}}"#))
 
         let outcome = try await service.unlock(accessPointID: nil)
         #expect(!outcome.granted)
@@ -145,7 +144,7 @@ struct APIAccessServiceTests {
     @Test("a grant with no door moved keeps the two facts apart")
     func grantWithoutDoor() async throws {
         let (service, exchange) = makeService()
-        exchange.queue(.init(status: 200, body: #"{"success":true,"data":{"decision":"granted","doorOpened":false}}"#))
+        exchange.queue(.init(status: 200, body: #"{"success":true,"data":{"granted":true,"doorOpened":false}}"#))
 
         let outcome = try await service.unlock(accessPointID: "door-1")
         #expect(outcome.granted)
@@ -156,7 +155,7 @@ struct APIAccessServiceTests {
     func refusalReason() async throws {
         let (service, exchange) = makeService()
         exchange.queue(.init(status: 200, body: """
-        {"success":true,"data":{"decision":"denied","reason":"not_verified","doorOpened":false,"message":"Verify first"}}
+        {"success":true,"data":{"granted":false,"reason":"not_verified","doorOpened":false,"message":"Verify first"}}
         """))
 
         let outcome = try await service.unlock(accessPointID: nil)
@@ -179,16 +178,40 @@ struct APIAccessServiceTests {
         #expect(fob.lastFour == "2345")
     }
 
+    /// A revoked credential stays in the list as `status: "revoked"`. Shown,
+    /// it would present a closed fob as live.
     @Test("revoked credentials are left out of the list")
     func revokedHidden() async throws {
         let (service, exchange) = makeService()
         exchange.queue(.init(status: 200, body: """
-        {"success":true,"data":[{"id":"c1","type":"key_fob","last4":"2345"},
-                                {"id":"c2","type":"key_fob","revokedAt":"2026-09-20T10:00:00.000Z"}]}
+        {"success":true,"data":[{"id":"c1","type":"key_fob","lastFour":"2345","status":"active"},
+                                {"id":"c2","type":"key_fob","lastFour":"1111","status":"revoked"}]}
         """))
 
         let credentials = try await service.credentials()
         #expect(credentials.map(\.id) == ["c1"])
         #expect(credentials.first?.kind == .keyFob)
+        #expect(credentials.first?.lastFour == "2345")
+    }
+
+    @Test("history reads result, denialReason and doorUnlocked")
+    func historyShape() async throws {
+        let (service, exchange) = makeService()
+        exchange.queue(.init(status: 200, body: """
+        {"success":true,"data":[
+          {"id":"h1","storeName":"Bakkelandet","method":"app_button","result":"denied",
+           "denialReason":"not_verified","doorUnlocked":false,"occurredAt":"2026-09-28T09:11:38.697Z"},
+          {"id":"h2","storeName":"Bakkelandet","method":"nfc","result":"granted",
+           "denialReason":null,"doorUnlocked":true,"occurredAt":"2026-09-28T08:00:00.000Z"}]}
+        """))
+
+        let events = try await service.history(limit: 5)
+        #expect(events.map(\.granted) == [false, true])
+        #expect(events.first?.reason == "not_verified")
+        #expect(events.first?.storeName == "Bakkelandet")
+        #expect(events.map(\.doorUnlocked) == [false, true])
+        // Fractional seconds parse rather than falling back to "now".
+        let expected = try #require(ISO8601DateFormatter().date(from: "2026-09-28T09:11:38Z")).addingTimeInterval(0.697)
+        #expect(abs(try #require(events.first).at.timeIntervalSince(expected)) < 0.01)
     }
 }

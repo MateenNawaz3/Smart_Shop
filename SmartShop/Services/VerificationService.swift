@@ -30,6 +30,19 @@ struct NfcAccessEntry: Identifiable, Sendable, Hashable {
     var point: String
     var approved: Bool
     var at: Date
+    var storeName: String? = nil
+}
+
+/// The answer to one tap on a reader.
+struct NfcAccessResult: Sendable, Hashable {
+    var approved: Bool
+    /// False on a grant when no physical door moved. Only the door has one.
+    var doorOpened = true
+    /// The server's own sentence for the customer, when it wrote one. It is
+    /// deliberate wording per refusal reason, so it outranks the app's copy.
+    var message: String? = nil
+    /// One of the seven refusal reasons, such as `not_verified`.
+    var reason: String? = nil
 }
 
 /// Identity verification, key fob, NFC access log and event tickets — the
@@ -41,8 +54,8 @@ protocol VerificationService: Sendable {
     /// Returns the resulting status (auto-approved in the demo).
     func submit(method: VerificationMethod, front: Data, back: Data?) async throws -> VerificationStatus
     func saveKeyFob(_ number: String?) async throws
-    /// Logs a simulated tap; returns whether access was granted.
-    func logNfcAccess(point: String, storeSlug: String?) async throws -> Bool
+    /// Logs a simulated tap and returns the decision.
+    func logNfcAccess(point: String, storeSlug: String?) async throws -> NfcAccessResult
     func recentNfcAccess() async throws -> [NfcAccessEntry]
     func boughtTicketEventIds() async throws -> [String]
     func buyTicket(for event: AppEvent) async throws
@@ -113,14 +126,14 @@ struct SupabaseVerificationService: VerificationService {
             .eq("id", value: user.id).execute()
     }
 
-    func logNfcAccess(point: String, storeSlug: String?) async throws -> Bool {
+    func logNfcAccess(point: String, storeSlug: String?) async throws -> NfcAccessResult {
         let user = try await client.auth.session.user
         let verified = try await info().status == .verified
         struct Insert: Encodable { var user_id: String; var punkt: String; var butik_slug: String?; var resultat: String }
         try await client.from("nfc_adgang_log")
             .insert(Insert(user_id: user.id.uuidString, punkt: point, butik_slug: storeSlug, resultat: verified ? "godkendt" : "naegtet"))
             .execute()
-        return verified
+        return NfcAccessResult(approved: verified)
     }
 
     func recentNfcAccess() async throws -> [NfcAccessEntry] {
@@ -157,10 +170,10 @@ final class StubVerificationService: VerificationService, @unchecked Sendable {
         state.status = .verified; state.method = method; return .verified
     }
     func saveKeyFob(_ number: String?) async throws { state.keyFob = number ?? "" }
-    func logNfcAccess(point: String, storeSlug: String?) async throws -> Bool {
+    func logNfcAccess(point: String, storeSlug: String?) async throws -> NfcAccessResult {
         let ok = state.status == .verified
         log.insert(NfcAccessEntry(id: UUID().uuidString, point: point, approved: ok, at: .now), at: 0)
-        return ok
+        return NfcAccessResult(approved: ok)
     }
     func recentNfcAccess() async throws -> [NfcAccessEntry] { Array(log.prefix(5)) }
     func boughtTicketEventIds() async throws -> [String] { tickets }
