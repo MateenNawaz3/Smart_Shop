@@ -21,9 +21,12 @@ struct VerificationStatusBadge: View {
         }
         HStack(spacing: 8) {
             Image(systemName: icon).font(.system(size: 14, weight: .semibold))
-            Text(label)
+            // One `Text`, so a tight row wraps between words. As two views,
+            // each was squeezed on its own and "Passport" broke mid-word.
             if let method {
-                Text("· \(methodLabel(method))").opacity(0.7)
+                Text("\(label) \(Text("· \(methodLabel(method))").foregroundStyle(fg.opacity(0.7)))")
+            } else {
+                Text(label)
             }
         }
         .font(Theme.body(.caption, weight: .semibold))

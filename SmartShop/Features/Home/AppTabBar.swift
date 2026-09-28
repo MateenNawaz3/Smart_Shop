@@ -65,7 +65,7 @@ struct AppTabBar: View {
             }
         }
         .toolbar(.hidden, for: .tabBar)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        .brandTabBar {
             BrandTabBar(selection: selection) { tab in
                 // Re-selecting the current tab pops it to its root, the iOS
                 // convention that stands in for the web's tab links always

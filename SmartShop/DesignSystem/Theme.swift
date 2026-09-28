@@ -52,7 +52,7 @@ enum Theme {
     /// PostScript names of the bundled Inter faces (see `Resources/Fonts` and
     /// `UIAppFonts` in Info.plist). The web loads Inter 400/500/600 from
     /// Google Fonts for body text.
-    private enum Inter {
+    enum Inter {
         static let regular = "Inter18pt-Regular"
         static let medium = "Inter18pt-Medium"
         static let semibold = "Inter18pt-SemiBold"

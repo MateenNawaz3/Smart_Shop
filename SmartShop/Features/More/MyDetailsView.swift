@@ -54,11 +54,12 @@ struct MyDetailsView: View {
     private var verificationCard: some View {
         GuestCard {
             VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                HStack {
+                // Stacked, not side by side: a phone-width row has no room for
+                // the title and "Awaiting approval · Passport" together.
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                     Text(t("verify.verify.title"))
                         .font(Theme.display(.title2, weight: .bold))
                         .foregroundStyle(Theme.Colors.green)
-                    Spacer()
                     VerificationStatusBadge(status: verification.status, method: verification.method)
                 }
                 if verification.status != .verified {
@@ -136,7 +137,12 @@ struct ProfileDetailsForm: View {
 
                 field("more.profileForm.firstName", \.fornavn, .firstName, content: .givenName, caps: .words)
                 field("more.profileForm.lastName", \.efternavn, .lastName, content: .familyName, caps: .words)
-                field("more.profileForm.phone", \.telefon, .telefon, content: .telephoneNumber, keyboard: .phonePad)
+                BrandPhoneField(
+                    label: t("more.profileForm.phone"),
+                    text: Binding(get: { model.details.telefon }, set: { model.set(\.telefon, $0) }),
+                    error: model.errors[.telefon].map { t($0) },
+                    tone: .onLight
+                )
 
                 AddressField(
                     label: t("more.profileForm.address"),
@@ -388,7 +394,7 @@ final class DetailsModel {
         if trim(details.by).isEmpty { next[.by] = "more.profileForm.errors.city" }
         let phone = details.telefon.filter { !$0.isWhitespace && $0 != "-" }
         if phone.isEmpty { next[.telefon] = "more.profileForm.errors.phoneRequired" }
-        else if phone.wholeMatch(of: /(\+45)?\d{8}/) == nil { next[.telefon] = "more.profileForm.errors.phoneInvalid" }
+        else if !Country.isValid(phone) { next[.telefon] = "more.profileForm.errors.phoneInvalid" }
         errors = next
         guard next.isEmpty, let profiles else { return }
 

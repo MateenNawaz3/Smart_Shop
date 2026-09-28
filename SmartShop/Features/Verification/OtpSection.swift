@@ -87,14 +87,18 @@ struct OtpSection: View {
                 }
             }
 
-            BrandTextField(
-                label: t(kind == .phone ? "otp.otp.phoneLabel" : "emailOtp.emailLabel"),
-                text: $destination,
-                contentType: kind == .phone ? .telephoneNumber : .emailAddress,
-                keyboard: kind == .phone ? .phonePad : .emailAddress,
-                autocapitalization: .never,
-                tone: dark ? .onGreen : .onLight
-            )
+            if kind == .phone {
+                BrandPhoneField(label: t("otp.otp.phoneLabel"), text: $destination, tone: dark ? .onGreen : .onLight)
+            } else {
+                BrandTextField(
+                    label: t("emailOtp.emailLabel"),
+                    text: $destination,
+                    contentType: .emailAddress,
+                    keyboard: .emailAddress,
+                    autocapitalization: .never,
+                    tone: dark ? .onGreen : .onLight
+                )
+            }
 
             if !sent {
                 Button(busy ? t("\(k).sending") : t("\(k).send")) { Task { await send() } }
@@ -141,7 +145,7 @@ struct OtpSection: View {
     private func send() async {
         error = nil
         let value = destination.trimmingCharacters(in: .whitespaces)
-        let valid = kind == .phone ? value.wholeMatch(of: /\+?\d[\d\s-]{6,17}/) != nil : value.isValidEmail
+        let valid = kind == .phone ? Country.isValid(value) : value.isValidEmail
         guard valid else { error = t(kind == .phone ? "otp.otp.errors.phone" : "emailOtp.errors.email"); return }
         busy = true
         defer { busy = false }

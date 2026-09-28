@@ -252,6 +252,7 @@ struct MitIDView: View {
                             set: { model.code = String($0.filter(\.isNumber).prefix(10)) }
                         ))
                         .keyboardType(.numberPad)
+                        .tint(Theme.Colors.green)
                         .font(.system(size: 24, weight: .medium))
                         .tracking(10)
                         .multilineTextAlignment(.center)

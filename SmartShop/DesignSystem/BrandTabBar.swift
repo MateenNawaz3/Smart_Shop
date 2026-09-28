@@ -41,7 +41,7 @@ enum AppTab: Hashable, CaseIterable {
 /// This is a plain view rather than a styled `TabView` bar: on iOS 26 the
 /// system bar is Liquid Glass and resists a solid brand colour, and the design
 /// also needs the display font and the guest lock badge on two of the tabs.
-/// Place it with `.safeAreaInset(edge: .bottom)`.
+/// Place it with `.brandTabBar { … }`.
 struct BrandTabBar: View {
     @Environment(\.strings) private var t
 
@@ -109,6 +109,51 @@ private struct TabPressStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.96 : 1)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+extension View {
+    /// Pins `bar` to the bottom of the screen with the keyboard sliding over
+    /// it, rather than riding up on top of the keyboard.
+    ///
+    /// A plain `.safeAreaInset(edge: .bottom)` places the bar on the keyboard's
+    /// edge. Here the whole stack ignores the keyboard, so the bar stays put,
+    /// and the inset the pages scroll against is swapped by hand: the bar's
+    /// height normally, the keyboard's height while it is up. Fields still
+    /// scroll clear of the keyboard that way.
+    func brandTabBar(isPresented: Bool = true, @ViewBuilder _ bar: () -> some View) -> some View {
+        modifier(BrandTabBarPlacement(isPresented: isPresented, bar: bar()))
+    }
+}
+
+private struct BrandTabBarPlacement<Bar: View>: ViewModifier {
+    var isPresented: Bool
+    var bar: Bar
+
+    @State private var barHeight: CGFloat = 0
+    /// How far the keyboard reaches above the bottom safe area.
+    @State private var keyboardHeight: CGFloat = 0
+    @State private var bottomSafeArea: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        ZStack(alignment: .bottom) {
+            content
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    Color.clear.frame(height: keyboardHeight > 0 ? keyboardHeight : isPresented ? barHeight : 0)
+                }
+            if isPresented {
+                bar.onGeometryChange(for: CGFloat.self) { $0.size.height } action: { barHeight = $0 }
+            }
+        }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { bottomSafeArea = $0 }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { note in
+            guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
+                  let screen = note.object as? UIScreen else { return }
+            let height = max(0, screen.bounds.height - frame.minY - bottomSafeArea)
+            let duration = note.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double ?? 0.25
+            withAnimation(.easeOut(duration: duration)) { keyboardHeight = height }
+        }
     }
 }
 

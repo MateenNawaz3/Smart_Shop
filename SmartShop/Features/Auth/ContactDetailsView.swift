@@ -103,7 +103,7 @@ final class ContactDetailsModel {
         if trim(fornavn).isEmpty { next[.fornavn] = "otp.contact.errors.firstName" }
         if trim(efternavn).isEmpty { next[.efternavn] = "otp.contact.errors.lastName" }
         if !trim(email).isValidEmail { next[.email] = "otp.contact.errors.email" }
-        if trim(telefon).wholeMatch(of: /\+?\d[\d\s-]{6,17}/) == nil { next[.telefon] = "otp.contact.errors.phone" }
+        if !Country.isValid(trim(telefon)) { next[.telefon] = "otp.contact.errors.phone" }
         if trim(adresse).isEmpty { next[.adresse] = "otp.contact.errors.address" }
         if !(trim(postnr).count == 4 && trim(postnr).allSatisfy(\.isNumber)) { next[.postnr] = "otp.contact.errors.postalCode" }
         if trim(by).isEmpty { next[.by] = "otp.contact.errors.city" }
@@ -224,9 +224,8 @@ struct ContactDetailsView: View {
             BrandTextField(label: t("otp.contact.email"), text: $model.email,
                            error: model.errors[.email].map { t($0) },
                            contentType: .emailAddress, keyboard: .emailAddress, autocapitalization: .never)
-            BrandTextField(label: t("otp.contact.phone"), text: $model.telefon,
-                           error: model.errors[.telefon].map { t($0) },
-                           contentType: .telephoneNumber, keyboard: .phonePad)
+            BrandPhoneField(label: t("otp.contact.phone"), text: $model.telefon,
+                            error: model.errors[.telefon].map { t($0) })
             AddressField(label: t("otp.contact.address"), text: $model.adresse,
                          error: model.errors[.adresse].map { t($0) }, tone: .onGreen) { model.apply($0) }
             HStack(alignment: .top, spacing: Theme.Spacing.md) {

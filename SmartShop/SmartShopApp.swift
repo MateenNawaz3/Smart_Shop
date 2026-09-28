@@ -67,6 +67,9 @@ struct SmartShopApp: App {
                     Translator(bundle: languages.bundle, overrides: languages.overrides)
                 )
                 .onOpenURL { url in handle(url) }
+                .onAppear {
+                    KeyboardDoneBar.install { [languages] in languages.string("common.done") }
+                }
                 .task {
                     // Server-owned copy, layered over the compiled bundle so a
                     // wording change does not need a new build. Failure is

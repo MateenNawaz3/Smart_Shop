@@ -49,19 +49,17 @@ struct GuestFlowView: View {
         .tint(.white)
         // The language chooser (empty path) is a green auth-style screen with
         // no tab bar, exactly as `/gaest` on the web. Every page after it has one.
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if !path.isEmpty {
-                BrandTabBar(selection: selectedTab, guest: true) { tab in
-                    switch tab {
-                    case .stores: path = [.hub, .stores]
-                    case .more: path = [.hub]
-                    case .home, .contests: break
-                    }
-                } onLocked: {
-                    showsGate = true
+        .brandTabBar(isPresented: !path.isEmpty) {
+            BrandTabBar(selection: selectedTab, guest: true) { tab in
+                switch tab {
+                case .stores: path = [.hub, .stores]
+                case .more: path = [.hub]
+                case .home, .contests: break
                 }
-                .transition(.move(edge: .bottom))
+            } onLocked: {
+                showsGate = true
             }
+            .transition(.move(edge: .bottom))
         }
         .animation(.easeOut(duration: 0.2), value: path.isEmpty)
         .sheet(isPresented: $showsGate) {

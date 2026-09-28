@@ -27,8 +27,12 @@ struct BrandTextField: View {
     /// `.onGreen` is the auth canvas; `.onLight` is the white inner pages.
     var tone: Tone = .onGreen
     var isDisabled = false
+    /// Drawn inside the field at its leading edge, with the text starting
+    /// after it. The phone field's country code uses it.
+    var leadingAccessory: AnyView?
 
     @State private var isRevealed = false
+    @State private var accessoryWidth: CGFloat = 0
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -41,9 +45,14 @@ struct BrandTextField: View {
                 .textFieldStyle(.plain)
                 .font(Theme.body(.body))
                 .foregroundStyle(isDisabled ? Theme.Colors.green.opacity(0.6) : Theme.Colors.ink)
+                // Cursor and selection handles. Set here because the auth and
+                // guest stacks tint white for their back buttons, which left
+                // the cursor invisible on the white field.
+                .tint(Theme.Colors.green)
                 .disabled(isDisabled)
                 .padding(.horizontal, Theme.Spacing.md)
                 .padding(.trailing, isSecure ? 40 : 0)
+                .padding(.leading, leadingAccessory == nil ? 0 : accessoryWidth)
                 .frame(height: 56)
                 .background(
                     isDisabled ? Theme.Colors.green.opacity(0.05) : .white,
@@ -60,6 +69,10 @@ struct BrandTextField: View {
                         )
                 }
                 .overlay(alignment: .trailing) { revealToggle }
+                .overlay(alignment: .leading) {
+                    leadingAccessory?
+                        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { accessoryWidth = $0 }
+                }
                 .focused($focused)
                 .textContentType(contentType)
                 .keyboardType(keyboard)

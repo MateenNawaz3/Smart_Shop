@@ -79,8 +79,8 @@ final class SignUpModel {
         s.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// Spaces and dashes dropped. The server takes a bare Danish 8-digit
-    /// number and normalises it to +45 itself.
+    /// Spaces and dashes dropped. The field supplies the country code, so this
+    /// is a full number such as "+4512345678".
     private var normalisedPhone: String {
         phone.filter { !$0.isWhitespace && $0 != "-" }
     }
@@ -104,7 +104,7 @@ final class SignUpModel {
 
         if normalisedPhone.isEmpty {
             next[.phone] = e("phone")
-        } else if normalisedPhone.wholeMatch(of: /\+?\d{8,15}/) == nil {
+        } else if !Country.isValid(normalisedPhone) {
             next[.phone] = e("phoneInvalid")
         }
 
@@ -308,9 +308,8 @@ struct SignUpView: View {
             BrandTextField(label: t("signup.fields.email"), placeholder: t("signup.placeholders.email"),
                            text: $model.email, error: model.errors[.email].map { t($0) },
                            contentType: .emailAddress, keyboard: .emailAddress, autocapitalization: .never)
-            BrandTextField(label: t("signup.fields.phone"), placeholder: t("signup.placeholders.phone"),
-                           text: $model.phone, error: model.errors[.phone].map { t($0) },
-                           contentType: .telephoneNumber, keyboard: .phonePad)
+            BrandPhoneField(label: t("signup.fields.phone"), placeholder: t("signup.placeholders.phone"),
+                            text: $model.phone, error: model.errors[.phone].map { t($0) })
             BrandTextField(label: t("signup.fields.password"), text: $model.password,
                            error: model.errors[.password].map { t($0) },
                            isSecure: true, contentType: .newPassword)

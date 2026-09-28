@@ -91,6 +91,7 @@ struct FindStoreView: View {
             TextField(t("stores.searchPlaceholder"), text: $query)
                 .font(Theme.body(.body))
                 .foregroundStyle(Theme.Colors.green)
+                .tint(Theme.Colors.green)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .submitLabel(.search)
