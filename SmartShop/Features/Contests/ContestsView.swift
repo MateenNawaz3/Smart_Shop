@@ -119,6 +119,11 @@ struct ContestsView: View {
     }
 
     private func settle() {
+        // A win or a loss uses up the day; only "Prøv igen" leaves a spin.
+        if var result = pending, result.outcome != .retry {
+            result.alreadySpun = true
+            pending = result
+        }
         withAnimation(.easeOut(duration: 0.3)) {
             revealed = pending
             spinning = false

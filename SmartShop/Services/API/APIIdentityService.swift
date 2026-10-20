@@ -35,8 +35,14 @@ nonisolated struct APIIdentityService: IdentityService {
             parts.append(.file(name: "back", filename: "back.jpg", mimeType: "image/jpeg", data: back))
         }
         let request = APIRequest.multipart(.post, "/mobile/identity/document", parts: parts)
-        let status: IdentityStatusDTO = try await client.send(request)
-        return Self.map(status)
+        do {
+            let status: IdentityStatusDTO = try await client.send(request)
+            return Self.map(status)
+        } catch APIError.failure(_, _, 409) {
+            // One is already in review. The guide says not to retry, and to
+            // the customer it is the same as having just sent it.
+            return (try? await status()) ?? IdentityStatus(state: .pending)
+        }
     }
 
     func status() async throws -> IdentityStatus {
@@ -116,7 +122,8 @@ nonisolated struct APIIdentityService: IdentityService {
             rejectionReason: dto.rejectionReason,
             method: dto.method.flatMap(IdentityStatus.Method.init(rawValue:)),
             documentType: dto.documentType,
-            mitIDAvailable: dto.mitIdAvailable
+            mitIDAvailable: dto.mitIdAvailable,
+            isVerified: dto.isVerified
         )
     }
 }

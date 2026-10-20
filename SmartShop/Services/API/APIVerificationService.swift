@@ -60,20 +60,22 @@ nonisolated struct APIVerificationService: VerificationService {
         let (s, profile, credentials) = try await (status, me, fobs)
         let fob = credentials.first { $0.kind == .keyFob }
         return VerificationInfo(
-            status: Self.status(s.state),
+            status: Self.status(s),
             method: Self.method(s),
             keyFob: fob.map(Self.maskedFob) ?? "",
             phone: profile.phone ?? "",
             phoneVerified: profile.phoneVerified,
             email: profile.email ?? "",
-            emailVerified: profile.emailVerified
+            emailVerified: profile.emailVerified,
+            rejectionReason: s.rejectionReason,
+            mitIDAvailable: s.mitIDAvailable
         )
     }
 
     /// Queued for a person to review, so this answers `pending`, never
     /// `verified` — the demo's auto-approval does not exist here.
     func submit(method: VerificationMethod, front: Data, back: Data?) async throws -> VerificationStatus {
-        Self.status(try await identity.submitDocument(method, front: front, back: back).state)
+        Self.status(try await identity.submitDocument(method, front: front, back: back))
     }
 
     // MARK: - Key fob
@@ -108,7 +110,7 @@ nonisolated struct APIVerificationService: VerificationService {
     /// `isVerified` — and is not logged, because there is nowhere to log it.
     func logNfcAccess(point: String, storeSlug: String?) async throws -> NfcAccessResult {
         guard point == "doer" else {
-            return NfcAccessResult(approved: try await identity.status().state == .verified)
+            return NfcAccessResult(approved: try await identity.status().verified)
         }
         let outcome = try await access.unlock(accessPointID: nil)
         return NfcAccessResult(
@@ -138,13 +140,14 @@ nonisolated struct APIVerificationService: VerificationService {
 
     // MARK: - Mapping
 
-    /// `expired` reads as not verified: the door refuses it just the same.
-    private static func status(_ state: IdentityStatus.State) -> VerificationStatus {
-        switch state {
-        case .verified: .verified
+    /// The badge goes by `isVerified`. `expired` reads as not verified: the
+    /// door refuses it just the same.
+    private static func status(_ status: IdentityStatus) -> VerificationStatus {
+        if status.verified { return .verified }
+        return switch status.state {
         case .pending: .pending
         case .rejected: .rejected
-        case .unverified, .expired: .none
+        case .verified, .unverified, .expired: .none
         }
     }
 

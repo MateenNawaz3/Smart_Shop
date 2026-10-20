@@ -78,11 +78,15 @@ struct HomeView: View {
                     ShopGuideCard()
 
                     // A banner with a link goes there; one without enlarges.
-                    WeekendOffersRail(offers: model.weekendOffers) { index in
-                        if let link = model.weekendOffers[index].link {
-                            openURL(link)
-                        } else {
-                            model.weekendLightbox = index
+                    // No banners (or a failed load) means no rail: an empty
+                    // one still drew its border as a blank box.
+                    if !model.weekendOffers.isEmpty {
+                        WeekendOffersRail(offers: model.weekendOffers) { index in
+                            if let link = model.weekendOffers[index].link {
+                                openURL(link)
+                            } else {
+                                model.weekendLightbox = index
+                            }
                         }
                     }
 

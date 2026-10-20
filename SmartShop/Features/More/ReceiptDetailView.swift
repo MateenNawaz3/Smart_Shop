@@ -75,7 +75,10 @@ private extension Receipt {
                     name: $0.quantity > 1 ? "\(Int($0.quantity))× \($0.name)" : $0.name,
                     price: $0.lineGross
                 )
-            }
+            },
+            // The mapper turns a missing total into 0; a receipt with lines
+            // and a zero total is that, not a free shop.
+            grossTotal: detail.grossTotal == 0 && !detail.lines.isEmpty ? nil : detail.grossTotal
         )
     }
 }

@@ -23,6 +23,10 @@ struct VerificationInfo: Equatable, Sendable {
     var phoneVerified = false
     var email = ""
     var emailVerified = false
+    /// The reviewer's reason, set only when the newest decision was a refusal.
+    var rejectionReason: String?
+    /// Whether to offer the MitID card at all.
+    var mitIDAvailable = true
 }
 
 struct NfcAccessEntry: Identifiable, Sendable, Hashable {

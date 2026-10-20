@@ -75,6 +75,11 @@ nonisolated struct IdentityStatus: Sendable, Equatable {
     /// `passport`, `driving_licence` or `national_id`.
     var documentType: String?
     var mitIDAvailable = false
+    /// The server's own verdict. It is what the badge and the door go by;
+    /// nil where no server said, and then `state` decides.
+    var isVerified: Bool?
+
+    var verified: Bool { isVerified ?? (state == .verified) }
 }
 
 nonisolated struct FaceStatus: Sendable, Equatable {

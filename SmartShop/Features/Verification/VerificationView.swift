@@ -30,7 +30,13 @@ struct VerificationView: View {
                 Text("\(t("verify.verify.statusLabel")):").font(Theme.body(.subheadline, weight: .semibold)).foregroundStyle(Theme.Colors.green.opacity(0.7))
                 VerificationStatusBadge(status: info.status, method: info.method)
             }
-            .padding(.bottom, Theme.Spacing.md)
+            .padding(.bottom, info.status == .rejected && info.rejectionReason != nil ? 0 : Theme.Spacing.md)
+
+            if info.status == .rejected, let reason = info.rejectionReason, !reason.isEmpty {
+                Text("\(t("verify.verify.rejectionReason")): \(reason)")
+                    .font(Theme.body(.subheadline)).foregroundStyle(Theme.Colors.red)
+                    .padding(.bottom, Theme.Spacing.md)
+            }
 
             if info.status == .verified {
                 VStack(alignment: .leading, spacing: Theme.Spacing.md) {
@@ -45,8 +51,14 @@ struct VerificationView: View {
                 .background(Theme.Colors.lime.opacity(0.15), in: .rect(cornerRadius: Theme.Radius.card))
             } else if loaded {
                 VStack(spacing: 20) {
-                    mitIDCard
-                    IdVerificationForm { Task { await reload() } }
+                    if info.mitIDAvailable {
+                        mitIDCard
+                    }
+                    if info.status == .pending {
+                        DocumentInReviewCard()
+                    } else {
+                        IdVerificationForm { Task { await reload() } }
+                    }
                     OtpSection(kind: .phone, initialDestination: info.phone, alreadyVerified: info.phoneVerified)
                     OtpSection(kind: .email, initialDestination: info.email, alreadyVerified: info.emailVerified)
                     Button(t("verify.verify.skip"), action: onDone)
@@ -55,6 +67,16 @@ struct VerificationView: View {
             }
         }
         .task { await reload() }
+        // A person reviews documents, so a pending status is re-read while
+        // the screen is open. A new status cancels the loop.
+        .task(id: info.status) {
+            guard info.status == .pending else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(15))
+                guard !Task.isCancelled else { return }
+                await reload()
+            }
+        }
         .fullScreenCover(isPresented: $showsMitID) {
             NavigationStack {
                 MitIDView(mitID: environment.mitIDService, auth: environment.authService, device: device, session: session)

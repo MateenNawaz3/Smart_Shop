@@ -45,6 +45,22 @@ struct VerificationStatusBadge: View {
     }
 }
 
+/// A document is with a person for review. Shown after an upload and for as
+/// long as the status stays `pending`.
+struct DocumentInReviewCard: View {
+    @Environment(\.strings) private var t
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "clock").foregroundStyle(Theme.Colors.green)
+            Text(t("verify.verify.sentForReview")).font(Theme.display(.body, weight: .bold)).foregroundStyle(Theme.Colors.green)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .background(Theme.Colors.lime.opacity(0.15), in: .rect(cornerRadius: Theme.Radius.card))
+    }
+}
+
 /// Passport, driving licence or ID card photos as an alternative to MitID.
 /// Port of `IdVerificationForm.tsx`. Licence and ID card need both sides.
 struct IdVerificationForm: View {
@@ -66,18 +82,13 @@ struct IdVerificationForm: View {
     @State private var loading = false
     @State private var done = false
 
-    private static let maxBytes = 10 * 1024 * 1024
+    private static let maxBytes = 8 * 1024 * 1024
     private var needsBack: Bool { method != .passport }
 
     var body: some View {
         if done {
-            HStack(spacing: 12) {
-                Image(systemName: "checkmark.seal.fill").foregroundStyle(Theme.Colors.green)
-                Text(t("verify.verify.done")).font(Theme.display(.body, weight: .bold)).foregroundStyle(Theme.Colors.green)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(20)
-            .background(Theme.Colors.lime.opacity(0.15), in: .rect(cornerRadius: Theme.Radius.card))
+            // Sent, not verified: a person reviews the photos.
+            DocumentInReviewCard()
         } else {
             form
         }

@@ -83,6 +83,17 @@ actor TokenRefresher {
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         let envelope = try? JSONDecoder.api.decode(APIEnvelope<RefreshData>.self, from: data)
 
+        // A server that is down or busy has not refused the token either.
+        // Keep it and let a later request try again.
+        if status == 429 {
+            throw APIError.rateLimited(message: envelope?.message?.text ?? "Too many requests")
+        }
+        if status >= 500 {
+            throw status == 503
+                ? APIError.unavailable(message: envelope?.message?.text ?? "Service unavailable")
+                : APIError.unexpectedStatus(status)
+        }
+
         guard status == 200, let envelope, envelope.success, let session = envelope.data else {
             // A refusal here is terminal: the refresh token is spent, revoked,
             // or was invalidated by a password change. Sign the user out.

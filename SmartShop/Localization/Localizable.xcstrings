@@ -16374,19 +16374,19 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Demo: billedet gemmes sikkert, men godkendes automatisk. Manuel kontrol og ID-scanning kommer senere."
+            "value" : "Demo: billedet gemmes sikkert og godkendes ikke automatisk. En medarbejder kontrollerer det."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Demo: Das Foto wird sicher gespeichert, aber automatisch genehmigt. Manuelle Prüfung und ID-Scan folgen später."
+            "value" : "Demo: Das Foto wird sicher gespeichert und nicht automatisch genehmigt. Ein Mitarbeiter prüft es."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Demo: the photo is stored securely but approved automatically. Manual review and ID scanning come later."
+            "value" : "Demo: the photo is stored securely and is not approved automatically. A member of staff reviews it."
           }
         }
       }
@@ -16512,19 +16512,19 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Billedet må højst fylde 10 MB."
+            "value" : "Billedet må højst fylde 8 MB."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Das Bild darf höchstens 10 MB groß sein."
+            "value" : "Das Bild darf höchstens 8 MB groß sein."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The image may be no larger than 10 MB."
+            "value" : "The image may be no larger than 8 MB."
           }
         }
       }
@@ -16943,6 +16943,52 @@
         }
       }
     },
+    "verify.verify.rejectionReason" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Begrundelse"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Begründung"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reason"
+          }
+        }
+      }
+    },
+    "verify.verify.sentForReview" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tak! Dit dokument er sendt. En medarbejder kontrollerer det, og din status opdateres her."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Danke! Dein Dokument wurde gesendet. Ein Mitarbeiter prüft es, und dein Status wird hier aktualisiert."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thank you! Your document has been sent. A member of staff will review it, and your status updates here."
+          }
+        }
+      }
+    },
     "verify.verify.skip" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -17156,19 +17202,19 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sørg for, at hele dokumentet er med, og at teksten kan læses. JPG eller PNG, maks. 10 MB."
+            "value" : "Sørg for, at hele dokumentet er med, og at teksten kan læses. JPG eller PNG, maks. 8 MB."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Achte darauf, dass das ganze Dokument sichtbar und der Text lesbar ist. JPG oder PNG, max. 10 MB."
+            "value" : "Achte darauf, dass das ganze Dokument sichtbar und der Text lesbar ist. JPG oder PNG, max. 8 MB."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Make sure the whole document is visible and the text is readable. JPG or PNG, max 10 MB."
+            "value" : "Make sure the whole document is visible and the text is readable. JPG or PNG, max 8 MB."
           }
         }
       }

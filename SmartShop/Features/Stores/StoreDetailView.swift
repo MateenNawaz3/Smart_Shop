@@ -60,7 +60,13 @@ struct StoreDetailView: View {
                 Button {
                     if let url = URL(string: store.facebookUrl) { openURL(url) }
                 } label: {
-                    Label(t("stores.followOnFacebook"), systemImage: "hand.thumbsup")
+                    // An explicit row, not `Label`: with the display font the
+                    // label's icon slot came out narrower than the glyph and
+                    // the icon sat on the first letter.
+                    HStack(spacing: 10) {
+                        Image(systemName: "hand.thumbsup")
+                        Text(t("stores.followOnFacebook"))
+                    }
                 }
                 .buttonStyle(LeaveGuestButtonStyle())
                 .padding(.top, Theme.Spacing.md + 4)
@@ -112,8 +118,11 @@ struct StoreDetailView: View {
                 Button {
                     if let url = directionsURL(for: store) { openURL(url) }
                 } label: {
-                    Label(t("stores.showDirections"), systemImage: "location.north.line")
-                        .frame(maxWidth: .infinity)
+                    HStack(spacing: 10) {
+                        Image(systemName: "location.north.line")
+                        Text(t("stores.showDirections"))
+                    }
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(WidePillButtonStyle())
                 .padding(.top, Theme.Spacing.sm)

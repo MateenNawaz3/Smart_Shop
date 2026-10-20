@@ -29,8 +29,11 @@ struct Receipt: Identifiable, Codable, Hashable, Sendable {
     var payment: String
     var barcode: String
     var lines: [Line]
+    /// What was actually paid, pant and discounts included. The lines alone
+    /// leave both out, so they only stand in when the till sent no total.
+    var grossTotal: Double?
 
-    var total: Double { lines.reduce(0) { $0 + $1.price } }
+    var total: Double { grossTotal ?? lines.reduce(0) { $0 + $1.price } }
 
     var purchasedAt: Date? {
         try? Date("\(date)T\(time):00", strategy: .iso8601.year().month().day()

@@ -137,11 +137,13 @@ struct ProfileDetailsForm: View {
 
                 field("more.profileForm.firstName", \.fornavn, .firstName, content: .givenName, caps: .words)
                 field("more.profileForm.lastName", \.efternavn, .lastName, content: .familyName, caps: .words)
+                // Read-only: `PATCH /me` never takes the phone, so an editable
+                // field would "save" a number that was never sent.
                 BrandPhoneField(
                     label: t("more.profileForm.phone"),
-                    text: Binding(get: { model.details.telefon }, set: { model.set(\.telefon, $0) }),
-                    error: model.errors[.telefon].map { t($0) },
-                    tone: .onLight
+                    text: .constant(model.details.telefon),
+                    tone: .onLight,
+                    isDisabled: true
                 )
 
                 AddressField(
@@ -332,12 +334,18 @@ final class DetailsModel {
     var passwordMessage: String?
     var passwordError: String?
 
+    /// The marketing consent as the server last had it.
+    private var savedMarketing = false
+
     private let addresses = DanishAddressService()
     private var postalTask: Task<Void, Never>?
     private var cityTask: Task<Void, Never>?
 
     func load() async {
-        if let d = try? await profiles?.details() { details = d }
+        if let d = try? await profiles?.details() {
+            details = d
+            savedMarketing = d.markedsforing
+        }
         loaded = true
     }
 
@@ -392,15 +400,18 @@ final class DetailsModel {
             next[.postnr] = "more.profileForm.errors.postalCode"
         }
         if trim(details.by).isEmpty { next[.by] = "more.profileForm.errors.city" }
-        let phone = details.telefon.filter { !$0.isWhitespace && $0 != "-" }
-        if phone.isEmpty { next[.telefon] = "more.profileForm.errors.phoneRequired" }
-        else if !Country.isValid(phone) { next[.telefon] = "more.profileForm.errors.phoneInvalid" }
         errors = next
         guard next.isEmpty, let profiles else { return }
 
         saving = true
         do {
             try await profiles.update(details)
+            // Marketing is a consent, not a profile field, so `update` does
+            // not carry it. Only sent when the box actually changed.
+            if details.markedsforing != savedMarketing {
+                try await profiles.setMarketing(details.markedsforing)
+                savedMarketing = details.markedsforing
+            }
             savedMessage = "more.profileForm.savedMessage"
         } catch {
             saveError = "more.profileForm.saveError"

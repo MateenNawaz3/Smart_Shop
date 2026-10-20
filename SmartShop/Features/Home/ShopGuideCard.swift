@@ -52,8 +52,9 @@ struct ShopGuideCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, Theme.Spacing.md)
                 .padding(.top, Theme.Spacing.md - 4)
-                .id(step)
-                .transition(.opacity)
+                // Swapped, not cross-faded. A fade kept the outgoing step's
+                // text on screen behind the new one, sometimes for good.
+                .animation(nil, value: step)
                 .accessibilityElement(children: .combine)
 
                 controls(total: total)
@@ -95,7 +96,9 @@ struct ShopGuideCard: View {
                 .accessibilityIdentifier("howToShopCounter")
         }
         .foregroundStyle(.white)
-        .padding(.horizontal, Theme.Spacing.md)
+        // Clear of the card's 30 pt corners, which the bar is clipped to:
+        // at 16 pt the title and the counter ran into the curve.
+        .padding(.horizontal, Theme.Spacing.lg)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity)
         .background(Theme.Colors.green)

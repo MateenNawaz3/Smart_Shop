@@ -81,9 +81,11 @@ struct BrandPhoneField: View {
                 Text(country.dialCode)
                     .font(Theme.body(.body))
                     .foregroundStyle(Theme.Colors.ink)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Theme.Colors.ink.opacity(0.45))
+                if !isDisabled {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Theme.Colors.ink.opacity(0.45))
+                }
                 Rectangle()
                     .fill(Theme.Colors.green.opacity(0.2))
                     .frame(width: 1, height: 24)

@@ -37,7 +37,9 @@ nonisolated struct APIWheelService: WheelService {
         return WheelStatus(
             canSpin: dto.canSpin,
             spinDate: dto.spinDate,
-            today: dto.today.map { SpinResult($0, alreadySpun: true) },
+            // `canSpin` is the server's word on the day. A `retry` leaves it
+            // true, so today's result must not lock the wheel then.
+            today: dto.today.map { SpinResult($0, alreadySpun: !dto.canSpin) },
             segments: dto.segments.map(WheelSegment.init)
         )
     }
